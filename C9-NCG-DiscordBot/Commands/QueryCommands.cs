@@ -21,7 +21,7 @@ namespace C9_NCG_DiscordBot.Commands
         [Command("ncg")]
         [Description("Allows you to request your NCG Balance using your PUBLIC Address")]
         public async Task Gold(CommandContext ctx, [Description("This is your PUBLIC Address")] string publickey)
-        {   
+        {
             //Debug
             var username = ctx.Member.Username;
             Console.WriteLine("User: " + username + " requested NCG value against key: " + publickey);
@@ -29,9 +29,25 @@ namespace C9_NCG_DiscordBot.Commands
             var ncg = new NCG();
             string result = ncg.NCGGold(publickey);
             if (result == "false")
-                await ctx.Channel.SendMessageAsync(username+", I'm sorry, something went wrong.\nPlease ensure that you provided the public key on your request. \nIf this error persists please contact the developer of this bot").ConfigureAwait(false);
+                await ctx.Channel.SendMessageAsync(username + ", I'm sorry, something went wrong.\nPlease ensure that you provided the public key on your request. \nIf this error persists please contact the developer of this bot").ConfigureAwait(false);
             else
-                await ctx.Channel.SendMessageAsync(username+", your current NCG is: **" + result + "**, according to my snapshot.").ConfigureAwait(false);
+                await ctx.Channel.SendMessageAsync(username + ", your current NCG is: **" + result + "**, according to my snapshot.").ConfigureAwait(false);
+        }
+
+        [Command("ncgbeforehash")]
+        [Description("Allows you to request your NCG Balance using your PUBLIC Address before a specific block occured")]
+        public async Task GoldBeforeHash(CommandContext ctx, [Description("This is your PUBLIC Address")] string publickey, [Description("Hash of the block you want to check against")] string hash)
+        {
+            //Debug
+            var username = ctx.Member.Username;
+            Console.WriteLine("User: " + username + " requested NCG value against key: " + publickey + " with hash "+hash+".");
+            //debug end
+            var ncg = new NCG();
+            string result = ncg.NCGGoldBeforeHash(publickey,hash);
+            if (result == "false")
+                await ctx.Channel.SendMessageAsync(username + ", I'm sorry, something went wrong.\nPlease ensure that you provided the public key on your request. \nIf this error persists please contact the developer of this bot").ConfigureAwait(false);
+            else
+                await ctx.Channel.SendMessageAsync(username + ", your NCG at that time was **" + result + "**, according to my snapshot.").ConfigureAwait(false);
         }
     }
 }
