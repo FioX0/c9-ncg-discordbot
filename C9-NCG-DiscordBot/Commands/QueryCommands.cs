@@ -5,15 +5,18 @@ using System.Text;
 using DSharpPlus;
 using System.Threading.Tasks;
 using DSharpPlus.CommandsNext.Attributes;
+using DSharpPlus.Entities;
 using C9_NCG_DiscordBot.blockchain;
 using System.IO;
+using C9_NCG_DiscordBot.TipSystem;
+using C9_NCG_DiscordBot.Models;
+using DSharpPlus.Interactivity;
+using C9_NCG_DiscordBot.Handlers;
 
 namespace C9_NCG_DiscordBot.Commands
 {
     public class QueryCommands
     {
-
-        int usage = 0;
 
         [Command("ping")]
         [Description("Way to check if the bot is alive")]
@@ -22,28 +25,36 @@ namespace C9_NCG_DiscordBot.Commands
             await ctx.Channel.SendMessageAsync("I'm here").ConfigureAwait(false);
         }
 
-        [Command("activity")]
-        [Description("You can check how many times people have used your bot commands since last restart.")]
-        public async Task Activity(CommandContext ctx)
-        {
-            await ctx.Channel.SendMessageAsync("Since last restart, I have been used: " +usage + " times.").ConfigureAwait(false);
-        }
-
         [Command("setprofile")]
         [Description("Set your public key against your discord profile, will allow you to query ncg without having to use the public key all the time.")]
-        public async Task SetProfileKey(CommandContext ctx, string publickey)
+        public async Task SetProfileKey(CommandContext ctx, [Description("This is what you want to call your profile")] string alias, [Description("This is your PUBLIC Address")] string publickey)
         {
             Console.WriteLine("SetProfileReceived");
             ulong userid = ctx.Member.Id;
+            var username = ctx.Member.DisplayName;
+            var eyes = DiscordEmoji.FromName(ctx.Client, ":eyes:");
+            var comms = new Communication();
             var setup = new Setup();
-            bool state = setup.SetProfile(publickey, userid);
+            var oldmessage = ctx.Message;
 
-            if (state == false)
+            bool state = setup.SetProfileNew(publickey,alias, userid);
+            await ctx.Message.CreateReactionAsync(eyes).ConfigureAwait(false);
+            if (state)
             {
-                await ctx.Channel.SendMessageAsync("Something has gone wrong, please report this as a bug, for key: " + publickey).ConfigureAwait(false);
+                await comms.SetProfile(ctx, oldmessage, username, alias, publickey);
             }
-            usage++;
-            await ctx.Channel.SendMessageAsync("I have now updated your profile with the following public key " + publickey).ConfigureAwait(false);
+            else
+            {
+                var ncg = new NCG();
+                if (ncg.NCGGold("0xa49d64c31A2594e8Fb452238C9a03beFD1119963") == null)
+                {
+                    await comms.SnapshotDown(ctx, oldmessage);
+                }
+                else
+                {
+                    await comms.GenericError(ctx, oldmessage, username);
+                }
+            }
         }
 
         [Command("ncg")]
@@ -52,40 +63,77 @@ namespace C9_NCG_DiscordBot.Commands
         {
             //Debug
             var username = ctx.Member.Username;
+            var eyes = DiscordEmoji.FromName(ctx.Client, ":eyes:");
+            await ctx.Message.CreateReactionAsync(eyes).ConfigureAwait(false);
+            var oldmessage = ctx.Message;
             Console.WriteLine("User: " + username + " requested NCG value against key: " + publickey);
             //debug end
             var ncg = new NCG();
             string result = ncg.NCGGold(publickey);
-            if (result == "false")
-                await ctx.Channel.SendMessageAsync(username + ", I'm sorry, something went wrong.\nPlease ensure that you provided the public key on your request. \nIf this error persists please contact the developer of this bot").ConfigureAwait(false);
+            Console.WriteLine(result);
+            var comms = new Communication();
+            if (result == null)
+            {
+                if (ncg.NCGGold("0xa49d64c31A2594e8Fb452238C9a03beFD1119963") == null)
+                {
+                    await comms.SnapshotDown(ctx, oldmessage);
+                }
+                else
+                {
+                    await comms.GenericError(ctx, oldmessage, username);
+                }
+            }
             else
             {
-                usage++;
-                await ctx.Channel.SendMessageAsync(username + ", your current NCG is: **" + result + "**, according to my snapshot.").ConfigureAwait(false);
+                await comms.NormalNCG(ctx, oldmessage, username, result);
             }
         }
 
         [Command("ncgprofile")]
         [Description("Allows you to request your NCG Balance using your previous saved publickey")]
-        public async Task GoldProfile(CommandContext ctx)
+        public async Task GoldProfile(CommandContext ctx, [Description("This is what you called your profile")] string alias)
         {
             //Debug
             var username = ctx.Member.DisplayName;
             var userid = ctx.Member.Id;
+            var eyes = DiscordEmoji.FromName(ctx.Client, ":eyes:");
+            await ctx.Message.CreateReactionAsync(eyes).ConfigureAwait(false);
+            var oldmessage = ctx.Message;
             Console.WriteLine("User: " + username + " requested NCG value against profile: " + username);
             //debug end
+            SqliteDataAccess sqli = new SqliteDataAccess();
+            ProfileModel profile = await sqli.LoadProfile(userid, alias);
             var ncg = new NCG();
-            string result = ncg.NCGProfile(userid);
-            if (result == "false")
-                await ctx.Channel.SendMessageAsync(username + ", I'm sorry, something went wrong.\nPlease ensure that you provided the public key on your request. \nIf this error persists please contact the developer of this bot").ConfigureAwait(false);
+            var result = await ncg.NCGProfileNewAsync(profile.PublicKey);
+            var comms = new Communication();
+            if (result == null)
+            {
+                //snapshot down?
+                if (ncg.NCGGold("0xa49d64c31A2594e8Fb452238C9a03beFD1119963") == null)
+                {
+                    //fuck snapshot is down.
+                    await comms.SnapshotDown(ctx, oldmessage);
+                }
+                else
+                {
+                    await comms.GenericError(ctx, oldmessage, username);
+                }
+            }
             else
             {
-                usage++;
-                await ctx.Channel.SendMessageAsync(username + ", your current NCG is: **" + result + "**, according to my snapshot.").ConfigureAwait(false);
+                bool state = await sqli.UpdateProfile(userid, alias, result);
+                if (state)
+                {
+                    float increase = float.Parse(result) - profile.Value;
+                    await comms.ProfileNCG(ctx, oldmessage, username, result, increase);
+                }
+                else
+                    await comms.GenericError(ctx, oldmessage, username);
             }
-
         }
 
+
+        //fix this shit
         [Command("ncgbeforehash")]
         [Description("Allows you to request your NCG Balance using your PUBLIC Address before a specific block occured")]
         public async Task GoldBeforeHash(CommandContext ctx, [Description("This is your PUBLIC Address")] string publickey, [Description("Hash of the block you want to check against")] string hash)
@@ -100,8 +148,7 @@ namespace C9_NCG_DiscordBot.Commands
                 await ctx.Channel.SendMessageAsync(username + ", I'm sorry, something went wrong.\nPlease ensure that you provided the public key on your request. \nIf this error persists please contact the developer of this bot").ConfigureAwait(false);
             else
             {
-                usage++;
-                await ctx.Channel.SendMessageAsync(username + ", your NCG at that time was **" + result + "**, according to my snapshot.").ConfigureAwait(false);
+                await ctx.Channel.SendMessageAsync(username + ", The requested public key had **" + result + "** NCG before the requested hash, according to my snapshot.").ConfigureAwait(false);
             }
         }
     }

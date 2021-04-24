@@ -15,7 +15,6 @@ namespace C9_NCG_DiscordBot
     {
         public DiscordClient Client { get; private set; }
         public CommandsNextModule Commands { get; private set; }
-
         public async Task RunAsync()
         {
             var json = string.Empty;
@@ -31,7 +30,7 @@ namespace C9_NCG_DiscordBot
                 Token = configJson.Token,
                 TokenType = TokenType.Bot,
                 AutoReconnect = true,
-                LogLevel = LogLevel.Debug,
+                LogLevel = LogLevel.Info,
                 UseInternalLogHandler = true
             };
 
@@ -39,28 +38,33 @@ namespace C9_NCG_DiscordBot
 
             Client.Ready += OnClientReady;
 
+            Client.UseInteractivity(new InteractivityConfiguration
+            {
+                Timeout = TimeSpan.FromMinutes(1)
+            }
+            );
+
             var commandsConfig = new CommandsNextConfiguration
             {
                 StringPrefix = new string(configJson.Prefix),
-                EnableDms = false,
+                EnableDms = true,
                 EnableMentionPrefix = false,
-                IgnoreExtraArguments = true,
+                IgnoreExtraArguments = false,
             };
+
 
             Commands = Client.UseCommandsNext(commandsConfig);
 
             Commands.RegisterCommands<QueryCommands>();
+            //Commands.RegisterCommands<TipCommands>();
 
             await Client.ConnectAsync();
-
             await Task.Delay(-1);
-
         }
 
         private Task OnClientReady(ReadyEventArgs e)
         {
             return Task.CompletedTask;
         }
-
     }
 }
