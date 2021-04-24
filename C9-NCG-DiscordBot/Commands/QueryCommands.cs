@@ -59,7 +59,7 @@ namespace C9_NCG_DiscordBot.Commands
 
         [Command("ncg")]
         [Description("Allows you to request your NCG Balance using your PUBLIC Address")]
-        public async Task Gold(CommandContext ctx, [Description("This is your PUBLIC Address")] string publickey)
+        public async Task Gold(CommandContext ctx, [Description("This is your PUBLIC Address")] string publickey = "")
         {
             //Debug
             var username = ctx.Member.Username;
@@ -75,60 +75,106 @@ namespace C9_NCG_DiscordBot.Commands
             if (result == null)
             {
                 if (ncg.NCGGold("0xa49d64c31A2594e8Fb452238C9a03beFD1119963") == null)
-                {
                     await comms.SnapshotDown(ctx, oldmessage);
-                }
                 else
-                {
                     await comms.GenericError(ctx, oldmessage, username);
-                }
             }
             else
-            {
                 await comms.NormalNCG(ctx, oldmessage, username, result);
-            }
+        }
+
+        [Command("all")]
+        [Description("Allows you to request your NCG Balance using your previous saved publickey")]
+        public async Task AllProfiles(CommandContext ctx, [Description("This is what you called your profile")] string alias = "givemeall")
+        {
+            SqliteDataAccess sqli = new SqliteDataAccess();
+            ProfileModel[] array = await sqli.LoadProfileALL(ctx.User.Id, alias);
+
         }
 
         [Command("ncgprofile")]
         [Description("Allows you to request your NCG Balance using your previous saved publickey")]
-        public async Task GoldProfile(CommandContext ctx, [Description("This is what you called your profile")] string alias)
+        public async Task GoldProfile(CommandContext ctx, [Description("This is what you called your profile")] string alias = "givemeall")
         {
-            //Debug
             var username = ctx.Member.DisplayName;
             var userid = ctx.Member.Id;
             var eyes = DiscordEmoji.FromName(ctx.Client, ":eyes:");
             await ctx.Message.CreateReactionAsync(eyes).ConfigureAwait(false);
             var oldmessage = ctx.Message;
+            SqliteDataAccess sqli = new SqliteDataAccess();
+            var ncg = new NCG();
+
+            //Debug
             Console.WriteLine("User: " + username + " requested NCG value against profile: " + username);
             //debug end
-            SqliteDataAccess sqli = new SqliteDataAccess();
-            ProfileModel profile = await sqli.LoadProfile(userid, alias);
-            var ncg = new NCG();
-            var result = await ncg.NCGProfileNewAsync(profile.PublicKey);
-            var comms = new Communication();
-            if (result == null)
+
+            if (alias == "givemeall")
             {
-                //snapshot down?
-                if (ncg.NCGGold("0xa49d64c31A2594e8Fb452238C9a03beFD1119963") == null)
+                ProfileModel[] array = await sqli.LoadProfileALL(ctx.User.Id, alias);
+                int count = array.Length;
+                int y=1;
+                List<DiscordMessage> messagesall = new List<DiscordMessage>();
+
+                foreach (var entry in array)
                 {
-                    //fuck snapshot is down.
-                    await comms.SnapshotDown(ctx, oldmessage);
-                }
-                else
-                {
-                    await comms.GenericError(ctx, oldmessage, username);
+                    var result = await ncg.NCGProfileNewAsync(entry.PublicKey);
+                    var comms = new Communication();
+                    if (result == null)
+                    {
+                        //snapshot down?
+                        if (ncg.NCGGold("0xa49d64c31A2594e8Fb452238C9a03beFD1119963") == null)
+                        {
+                            //fuck snapshot is down.
+                            await comms.SnapshotDown(ctx, oldmessage);
+                        }
+                        else
+                        {
+                            await comms.GenericError(ctx, oldmessage, username);
+                        }
+                    }
+                    else
+                    {
+                        bool state = await sqli.UpdateProfile(userid, entry.alias, result);
+                        if (state)
+                        {
+                            float increase = float.Parse(result) - entry.Value;
+                            messagesall = await comms.ProfileNCGALL(ctx, oldmessage, username, result, increase, entry.alias, count, y, messagesall);
+                        }
+                        else
+                            await comms.GenericError(ctx, oldmessage, username);
+                    }
+                    y++;
                 }
             }
             else
             {
-                bool state = await sqli.UpdateProfile(userid, alias, result);
-                if (state)
+                ProfileModel profile = await sqli.LoadProfile(userid, alias);
+                var result = await ncg.NCGProfileNewAsync(profile.PublicKey);
+                var comms = new Communication();
+                if (result == null)
                 {
-                    float increase = float.Parse(result) - profile.Value;
-                    await comms.ProfileNCG(ctx, oldmessage, username, result, increase);
+                    //snapshot down?
+                    if (ncg.NCGGold("0xa49d64c31A2594e8Fb452238C9a03beFD1119963") == null)
+                    {
+                        //fuck snapshot is down.
+                        await comms.SnapshotDown(ctx, oldmessage);
+                    }
+                    else
+                    {
+                        await comms.GenericError(ctx, oldmessage, username);
+                    }
                 }
                 else
-                    await comms.GenericError(ctx, oldmessage, username);
+                {
+                    bool state = await sqli.UpdateProfile(userid, alias, result);
+                    if (state)
+                    {
+                        float increase = float.Parse(result) - profile.Value;
+                        await comms.ProfileNCG(ctx, oldmessage, username, result, increase,alias);
+                    }
+                    else
+                        await comms.GenericError(ctx, oldmessage, username);
+                }
             }
         }
 

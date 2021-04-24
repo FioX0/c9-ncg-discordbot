@@ -23,7 +23,7 @@ namespace C9_NCG_DiscordBot.Handlers
             _currentStep = startingstep;
         }
 
-        private readonly List<DiscordMessage> messages = new List<DiscordMessage>();
+        public static readonly List<DiscordMessage> messages = new List<DiscordMessage>();
 
         public async Task<bool> ProcessDialogue()
         {

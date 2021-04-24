@@ -11,6 +11,8 @@ namespace C9_NCG_DiscordBot.Handlers
 {
     public class Communication
     {
+
+        public List<DiscordMessage> messages = new List<DiscordMessage>();
         #region NCG
         public async Task SnapshotDown(CommandContext ctxl, DiscordMessage oldmessage)
         {
@@ -85,7 +87,7 @@ namespace C9_NCG_DiscordBot.Handlers
             }
             catch (Exception) { }
         }
-        public async Task ProfileNCG (CommandContext ctxl, DiscordMessage oldmessage, string username, string result, float increase)
+        public async Task ProfileNCG (CommandContext ctxl, DiscordMessage oldmessage, string username, string result, float increase, string alias)
         {
             var delete = DiscordEmoji.FromName(ctxl.Client, ":no_entry_sign:");
             var done = DiscordEmoji.FromName(ctxl.Client, ":white_check_mark:");
@@ -93,7 +95,7 @@ namespace C9_NCG_DiscordBot.Handlers
             var embedmessage = new DiscordEmbedBuilder
             {
                 Title = "NCGProfile",
-                Description = "The NCG against the requested 9C-Profile is: **" + result + "**.\n\nThis is an increase of: **" + increase.ToString("0.00") + "** since last request.",
+                Description = "The NCG against the requested 9C-Profile with alias **"+alias+"**  is: **" + result + "**.\n\nThis is an increase of: **" + increase.ToString("0.00") + "** since last request.",
                 Color = DiscordColor.Green,
                 ThumbnailUrl = ctxl.Client.CurrentUser.AvatarUrl
             };
@@ -120,6 +122,62 @@ namespace C9_NCG_DiscordBot.Handlers
             }
             catch (Exception)
             {
+            }
+        }
+
+        public async Task<List<DiscordMessage>> ProfileNCGALL(CommandContext ctxl, DiscordMessage oldmessage, string username, string result, float increase, string alias, int arraylength, int arrayentry, List<DiscordMessage> messagelist)
+        {
+            var delete = DiscordEmoji.FromName(ctxl.Client, ":no_entry_sign:");
+            var done = DiscordEmoji.FromName(ctxl.Client, ":white_check_mark:");
+
+
+            var embedmessage = new DiscordEmbedBuilder
+            {
+                Title = "NCGProfile",
+                Description = "The NCG against the requested 9C-Profile with alias **" + alias + "**  is: **" + result + "**.\n\nThis is an increase of: **" + increase.ToString("0.00") + "** since last request.",
+                Color = DiscordColor.Green,
+                ThumbnailUrl = ctxl.Client.CurrentUser.AvatarUrl
+            };
+            var sendmessage = await ctxl.Channel.SendMessageAsync(embed: embedmessage).ConfigureAwait(false);
+            messagelist.Add(sendmessage);
+
+            if (arraylength == arrayentry)
+            {
+                await sendmessage.CreateReactionAsync(delete).ConfigureAwait(false);
+                var interactivity = ctxl.Client.GetInteractivityModule();
+                var reactionresult = await interactivity.WaitForMessageReactionAsync(x => x.Name == delete, sendmessage, ctxl.User).ConfigureAwait(false);
+                try
+                {
+                    if (reactionresult is null)
+                    {
+                        await sendmessage.DeleteAllReactionsAsync("TimedOut").ConfigureAwait(false);
+                        await oldmessage.DeleteAllReactionsAsync("Done").ConfigureAwait(false);
+                        await oldmessage.CreateReactionAsync(done).ConfigureAwait(false);
+                    }
+                    else if (reactionresult.Emoji == delete)
+                    {
+                        await oldmessage.DeleteAllReactionsAsync("Done").ConfigureAwait(false);
+                        await oldmessage.CreateReactionAsync(done).ConfigureAwait(false);
+                        await DeleteMessages(messagelist);
+                    }
+                }
+                catch (Exception)
+                {
+                }
+            }
+            else
+            {
+                Console.WriteLine("Not Done yet");
+                return messagelist;
+            }
+            return null;
+        }
+
+        private async Task DeleteMessages(List<DiscordMessage> list)
+        { 
+            foreach (var message in list)
+            {
+                await message.DeleteAsync().ConfigureAwait(false);
             }
         }
 

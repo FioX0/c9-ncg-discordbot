@@ -31,6 +31,29 @@ namespace C9_NCG_DiscordBot
             var fail = new ProfileModel();
             return fail;
         }
+
+        public async Task<ProfileModel[]> LoadProfileALL(ulong discordid, string alias)
+        {
+            if (alias != "")
+            {
+                using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+                {
+                    try
+                    {
+                        var sql = @"Select * from NCGProfile  WHERE DiscordId = @id;";
+
+                        using (var multi = cnn.QueryMultiple(sql, new { id = discordid }))
+                        {
+                            var customer = multi.Read<ProfileModel>().ToArray();
+                            return customer;
+                        }
+                    }
+                    catch (Exception) { }
+                }
+                return null;
+            }
+            return null;
+        }
         public static bool SaveProfile(ProfileModel profile)
         {
             using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
