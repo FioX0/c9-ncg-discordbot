@@ -12,6 +12,15 @@ using C9_NCG_DiscordBot.TipSystem;
 using C9_NCG_DiscordBot.Models;
 using DSharpPlus.Interactivity;
 using C9_NCG_DiscordBot.Handlers;
+using RestSharp;
+using System.Data;
+using Newtonsoft.Json;
+using System.Linq;
+using System.Xml;
+using ServiceStack;
+using ServiceStack.Text;
+using Newtonsoft.Json.Linq;
+using ChoETL;
 
 namespace C9_NCG_DiscordBot.Commands
 {
@@ -24,6 +33,7 @@ namespace C9_NCG_DiscordBot.Commands
         {
             await ctx.Channel.SendMessageAsync("I'm here").ConfigureAwait(false);
         }
+
 
         [Command("setprofile")]
         [Description("Set your public key against your discord profile, will allow you to query ncg without having to use the public key all the time.")]
@@ -83,15 +93,6 @@ namespace C9_NCG_DiscordBot.Commands
                 await comms.NormalNCG(ctx, oldmessage, username, result);
         }
 
-        [Command("all")]
-        [Description("Allows you to request your NCG Balance using your previous saved publickey")]
-        public async Task AllProfiles(CommandContext ctx, [Description("This is what you called your profile")] string alias = "givemeall")
-        {
-            SqliteDataAccess sqli = new SqliteDataAccess();
-            ProfileModel[] array = await sqli.LoadProfileALL(ctx.User.Id, alias);
-
-        }
-
         [Command("ncgprofile")]
         [Description("Allows you to request your NCG Balance using your previous saved publickey")]
         public async Task GoldProfile(CommandContext ctx, [Description("This is what you called your profile")] string alias = "givemeall")
@@ -107,18 +108,20 @@ namespace C9_NCG_DiscordBot.Commands
             //Debug
             Console.WriteLine("User: " + username + " requested NCG value against profile: " + username);
             //debug end
-
+            var comms = new Communication();
             if (alias == "givemeall")
             {
                 ProfileModel[] array = await sqli.LoadProfileALL(ctx.User.Id, alias);
                 int count = array.Length;
+                if (count == 0)
+                    await comms.GenericError(ctx, oldmessage, username);
                 int y=1;
                 List<DiscordMessage> messagesall = new List<DiscordMessage>();
 
                 foreach (var entry in array)
                 {
                     var result = await ncg.NCGProfileNewAsync(entry.PublicKey);
-                    var comms = new Communication();
+
                     if (result == null)
                     {
                         //snapshot down?
@@ -150,7 +153,6 @@ namespace C9_NCG_DiscordBot.Commands
             {
                 ProfileModel profile = await sqli.LoadProfile(userid, alias);
                 var result = await ncg.NCGProfileNewAsync(profile.PublicKey);
-                var comms = new Communication();
                 if (result == null)
                 {
                     //snapshot down?

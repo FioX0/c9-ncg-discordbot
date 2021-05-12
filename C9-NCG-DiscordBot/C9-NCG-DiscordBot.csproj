@@ -12,12 +12,17 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Aspose.Cells" Version="21.4.0" />
+    <PackageReference Include="ChoETL.JSON" Version="1.2.1.15" />
+    <PackageReference Include="ChoETL.JSON.NETStandard" Version="1.2.1.15" />
     <PackageReference Include="Dapper" Version="2.0.78" />
     <PackageReference Include="DSharpPlus" Version="3.2.3" />
     <PackageReference Include="DSharpPlus.CommandsNext" Version="3.2.3" />
     <PackageReference Include="DSharpPlus.Interactivity" Version="3.2.3" />
+    <PackageReference Include="Json.Net" Version="1.0.31" />
     <PackageReference Include="NUnit" Version="3.13.1" />
     <PackageReference Include="RestSharp" Version="106.11.7" />
+    <PackageReference Include="ServiceStack.Text" Version="5.11.0" />
     <PackageReference Include="SQLite" Version="3.13.0" />
     <PackageReference Include="System.Data.SQLite" Version="1.0.113.7" />
   </ItemGroup>

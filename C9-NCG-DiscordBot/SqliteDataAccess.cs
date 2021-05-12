@@ -101,8 +101,10 @@ namespace C9_NCG_DiscordBot
 
                 var affectedRows = cnn.Execute(sql, new { value = value, id = discordid, alias = alias }); ;
 
-                Console.WriteLine("Affected Rows: " + affectedRows);
-                return true;
+                if (affectedRows > 0)
+                    return true;
+                else
+                    return false;
             }
         }
         #endregion
@@ -170,7 +172,7 @@ namespace C9_NCG_DiscordBot
             }
         }
 
-        public async Task<bool> DumpTransfer(string state, TipModel User, TipModel Mention, float amount)
+        public async Task<bool> DumpTransfer(string state, TipModel User, TipModel Mention, float amount, string txid = "")
         {
             ulong userid = User.Id;
             ulong mentionid = Mention.Id;
@@ -182,7 +184,7 @@ namespace C9_NCG_DiscordBot
                 ornew = User.Balance - amount;
 
 
-            string sql = "insert into TipAudit (OriginProfileId,DestinationProfileId,Details,OriginOldAmount,OriginNewAmount,DestinationOldAmount,DestinationNewAmount,DateTime) values (@id, @id2, @text,@orold,@ornew,@desold,@desnew,@date);";
+            string sql = "insert into TipAudit (OriginProfileId,DestinationProfileId,Details,OriginOldAmount,OriginNewAmount,DestinationOldAmount,DestinationNewAmount,DateTime,TransactionId) values (@id, @id2, @text, @orold, @ornew, @desold, @desnew, @date, @txid);";
             using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
             {
                 cnn.Execute(sql, new
@@ -194,7 +196,34 @@ namespace C9_NCG_DiscordBot
                     orold = User.Balance,
                     desnew = Mention.Balance + amount,
                     desold = Mention.Balance,
-                    date = DateTime.UtcNow
+                    date = DateTime.UtcNow,
+                    txid = txid
+
+                });
+                return true;
+            }
+        }
+
+        public async Task<bool> DumpPayment(string state, PaymentModel User, PaymentModel Mention, float amount, string txid = "")
+        {
+            int userid = User.ProfileId;
+            int mentionid = Mention.ProfileId;
+
+            string sql = "insert into TipAudit (OriginProfileId,DestinationProfileId,Details,OriginOldAmount,OriginNewAmount,DestinationOldAmount,DestinationNewAmount,DateTime,TransactionId) values (@id, @id2, @text, @orold, @ornew, @desold, @desnew, @date, @txid);";
+            using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+            {
+                cnn.Execute(sql, new
+                {
+                    id = userid,
+                    id2 = mentionid,
+                    text = "[" + state + "] " + "UserId: " + userid + " has cashed out "+amount+ " tips.",
+                    ornew = 0,
+                    orold = 0,
+                    desnew = 0,
+                    desold = 0,
+                    date = DateTime.UtcNow,
+                    txid = txid
+
                 });
                 return true;
             }
@@ -207,8 +236,10 @@ namespace C9_NCG_DiscordBot
             { 
                 var affectedRows = cnn.Execute(sql, new { role = role, id = discordid}); ;
 
-                Console.WriteLine("Affected Rows: " + affectedRows);
-                return true;
+                if (affectedRows > 0)
+                    return true;
+                else
+                    return false;
             }
         }
 
@@ -226,6 +257,79 @@ namespace C9_NCG_DiscordBot
             }
             catch { };
             return null;
+        }
+
+        public async Task<bool> QueueWithdraw(TipModel profile, ulong discordid, string key, float amount, int authorised, int attempt =0)
+        {
+
+
+            string sql = "insert into PaymentQueue (ProfileId, DiscordUserId, Key, Amount, Authorised, Attempt) values (@pid, @did, @key, @amount, @auth, @attempt);";
+            using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+            {
+                var affectedRows = cnn.Execute(sql, new
+                {
+                    pid = profile.Id,
+                    did = discordid,
+                    key = key,
+                    amount = amount,
+                    auth = authorised,
+                    attempt = attempt
+
+                });
+                if (affectedRows > 0)
+                    return true;
+                else
+                    return false;
+            }
+        }
+
+        public async Task<bool> RemoveWithdrawl(PaymentModel profile)
+        {
+
+
+            string sql = "delete from PaymentQueue where id = @id;";
+            using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+            {
+                var affectedRows = cnn.Execute(sql, new { @id = profile.Id }); ;
+
+                if (affectedRows > 0)
+                    return true;
+                else
+                    return false;
+            }
+        }
+
+        public async Task<PaymentModel> CheckPaymentQueue()
+        {
+            int randomid = 1;
+            PaymentModel output;
+            try
+            {
+                string query = "Select * from PaymentQueue WHERE Authorised = @id LIMIT 1;";
+                using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+                {
+                    output = cnn.QueryFirst<PaymentModel>(query, new { id = randomid});
+                    return output;
+                }
+            }
+            catch { };
+            var fail = new PaymentModel();
+            return fail;
+        }
+
+        public async Task<bool> Withdraw(ulong discordid, float amount)
+        {
+
+            string sql = "UPDATE TipProfile SET Balance = @amount WHERE DiscordId = @id";
+            using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+            {
+                var affectedRows = cnn.Execute(sql, new { amount = amount, id = discordid }); ;
+
+                if (affectedRows > 0)
+                    return true;
+                else
+                    return false;
+            }
         }
         #endregion
     }

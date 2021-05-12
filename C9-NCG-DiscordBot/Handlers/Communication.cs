@@ -1,4 +1,5 @@
 ﻿using C9_NCG_DiscordBot.Models;
+using DSharpPlus;
 using DSharpPlus.CommandsNext;
 using DSharpPlus.Entities;
 using DSharpPlus.Interactivity;
@@ -13,6 +14,8 @@ namespace C9_NCG_DiscordBot.Handlers
     {
 
         public List<DiscordMessage> messages = new List<DiscordMessage>();
+
+        //SHIT ton of duplciate code here, we need to eventually clean this crap.
         #region NCG
         public async Task SnapshotDown(CommandContext ctxl, DiscordMessage oldmessage)
         {
@@ -250,7 +253,7 @@ namespace C9_NCG_DiscordBot.Handlers
             var embedmessage = new DiscordEmbedBuilder
             {
                 Title = "TipRequest",
-                Description = "**" + username + "**: - I have **Succesfully** processed your request: \n\n Tip to **"+mentionuser+"** amount of **"+ammount+"** Tips.\n\n You still have **" + balance + "** Tips.",
+                Description = "**" + username + "**: - I have **Succesfully** processed your request: \n\n Tip to **"+mentionuser+"** amount of **"+ammount+"** Tips.\n\nYou still have **" + balance + "** Tips.",
                 Color = DiscordColor.Green,
                 ThumbnailUrl = ctxl.Client.CurrentUser.AvatarUrl
             };
@@ -266,7 +269,39 @@ namespace C9_NCG_DiscordBot.Handlers
             var embedmessage = new DiscordEmbedBuilder
             {
                 Title = "Admin Balance",
-                Description = "**" + username + "**: - I have **Succesfully** processed your request: \n\n There's still "+value+" left in the Admin Pot",
+                Description = "**" + username + "**: - I have **Succesfully** processed your request: \n\nThere's still **"+value+"** left in the Admin Pot",
+                Color = DiscordColor.Green,
+                ThumbnailUrl = ctxl.Client.CurrentUser.AvatarUrl
+            };
+            await ctxl.Channel.SendMessageAsync(embed: embedmessage).ConfigureAwait(false);
+            await oldmessage.DeleteAllReactionsAsync("Done").ConfigureAwait(false);
+            await oldmessage.CreateReactionAsync(done).ConfigureAwait(false);
+        }
+
+        public async Task RedeemSuccess(DiscordClient client, PaymentModel profile, string txid)
+        {
+
+            var embedmessage = new DiscordEmbedBuilder
+            {
+                Title = "Tip Withdrawal",
+                Description = "**<@" + profile.DiscordUserId + ">**: - I have **Succesfully** processed your withdrawal:\n\nYour TransactionId(txid) is: **[" + txid + "](https://explorer.libplanet.io/9c-main/transaction/?"+txid+")**\n\n",
+                Color = DiscordColor.Green,
+                ThumbnailUrl = "https://cdn.discordapp.com/avatars/826378705185538059/44f64314271603e6e5ed5ddd60b63ead.png"
+            };
+            DiscordChannel channel = await client.GetChannelAsync(829007486479499315);
+            await client.SendMessageAsync(channel, embed: embedmessage).ConfigureAwait(false);
+            var ping = await client.SendMessageAsync(channel,"<@"+profile.DiscordUserId+ ">").ConfigureAwait(false);
+            await ping.DeleteAsync("PingSent");
+        }
+
+        public async Task RedeemQueue(CommandContext ctxl, DiscordMessage oldmessage, string username, float value)
+        {
+            var done = DiscordEmoji.FromName(ctxl.Client, ":white_check_mark:");
+
+            var embedmessage = new DiscordEmbedBuilder
+            {
+                Title = "Tip Withdrawal",
+                Description = "**" + username + "**: - I have **Succesfully** queued your withdrawal:\n\nI will let you know when this has been processed.\n\nThere's still **" + value + "** left in your TipBalance",
                 Color = DiscordColor.Green,
                 ThumbnailUrl = ctxl.Client.CurrentUser.AvatarUrl
             };
@@ -282,7 +317,7 @@ namespace C9_NCG_DiscordBot.Handlers
             var embedmessage = new DiscordEmbedBuilder
             {
                 Title = "TipBalance",
-                Description = "**" + username + "**: - I'm not able to proceed with your request.\n\n You are only able to query your own TipBalance",
+                Description = "**" + username + "**: - I'm not able to proceed with your request.\n\nYou are only able to query your own TipBalance",
                 Color = DiscordColor.Red,
                 ThumbnailUrl = ctxl.Client.CurrentUser.AvatarUrl
             };
@@ -298,7 +333,7 @@ namespace C9_NCG_DiscordBot.Handlers
             var embedmessage = new DiscordEmbedBuilder
             {
                 Title = "TipBalance",
-                Description = "**" + username + "**: - I'm not able to proceed with your request.\n\n This is likely to missing a required value.\n\nA correct example would be:\n +tip @FioX 10",
+                Description = "**" + username + "**: - I'm not able to proceed with your request.\n\nThis is likely to missing a required value.\n\nA correct example would be:\n +tip @FioX 10",
                 Color = DiscordColor.Red,
                 ThumbnailUrl = ctxl.Client.CurrentUser.AvatarUrl
             };
@@ -314,7 +349,7 @@ namespace C9_NCG_DiscordBot.Handlers
             var embedmessage = new DiscordEmbedBuilder
             {
                 Title = "TipRequest",
-                Description = "**" + username + "**: - I'm not able to proceed with your request.\n\n You do not have enough TipBalance to proceed with the tip.",
+                Description = "**" + username + "**: - I'm not able to proceed with your request.\n\nYou do not have enough TipBalance to proceed with the tip.",
                 Color = DiscordColor.Red,
                 ThumbnailUrl = ctxl.Client.CurrentUser.AvatarUrl
             };
@@ -330,7 +365,7 @@ namespace C9_NCG_DiscordBot.Handlers
             var embedmessage = new DiscordEmbedBuilder
             {
                 Title = "TipRequest",
-                Description = "**" + username + "**: - I'm not able to proceed with your request.\n\n I'm afraid you can't tip yourself.",
+                Description = "**" + username + "**: - I'm not able to proceed with your request.\n\nI'm afraid you can't tip yourself.",
                 Color = DiscordColor.Red,
                 ThumbnailUrl = ctxl.Client.CurrentUser.AvatarUrl
             };
@@ -346,7 +381,7 @@ namespace C9_NCG_DiscordBot.Handlers
             var embedmessage = new DiscordEmbedBuilder
             {
                 Title = "TipRequest",
-                Description = "**" + username + "**: - I'm not able to proceed with your request.\n\n Something has gone very wrong.\n\nI will ping my minion to have a look. I recommend to not repeat your tip as it could have gone through.",
+                Description = "**" + username + "**: - I'm not able to proceed with your request.\n\nSomething has gone very wrong.\n\nI will ping my minion to have a look. I recommend to not repeat your tip as it could have gone through.",
                 Color = DiscordColor.Red,
                 ThumbnailUrl = ctxl.Client.CurrentUser.AvatarUrl
             };
