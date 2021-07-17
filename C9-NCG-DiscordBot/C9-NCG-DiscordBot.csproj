@@ -13,8 +13,9 @@
 
   <ItemGroup>
     <PackageReference Include="Aspose.Cells" Version="21.4.0" />
-    <PackageReference Include="ChoETL.JSON" Version="1.2.1.15" />
+    <PackageReference Include="ChoETL.JSON" Version="1.2.1.16" />
     <PackageReference Include="ChoETL.JSON.NETStandard" Version="1.2.1.15" />
+    <PackageReference Include="CsvHelper" Version="27.0.2" />
     <PackageReference Include="Dapper" Version="2.0.78" />
     <PackageReference Include="DSharpPlus" Version="3.2.3" />
     <PackageReference Include="DSharpPlus.CommandsNext" Version="3.2.3" />

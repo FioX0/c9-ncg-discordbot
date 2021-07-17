@@ -51,6 +51,7 @@ namespace C9_NCG_DiscordBot
                 EnableDms = true,
                 EnableMentionPrefix = false,
                 IgnoreExtraArguments = false,
+                EnableDefaultHelp = false,
             };
 
 
@@ -58,9 +59,17 @@ namespace C9_NCG_DiscordBot
 
             Commands.RegisterCommands<QueryCommands>();
             Commands.RegisterCommands<TipCommands>();
+            Commands.RegisterCommands<HelpMe>();
+            Commands.RegisterCommands<ReportCommands>();
 
             await Client.ConnectAsync();
+            Console.WriteLine("Running NCGBot V1.0.6");
+
             Tips.PaymentProcessor(Client);
+            extras.DailyBlockReport(Client);
+            extras.ShopDataAsync(Client);
+            //extras.Alarm(Client);
+
             await Task.Delay(-1);
         }
 

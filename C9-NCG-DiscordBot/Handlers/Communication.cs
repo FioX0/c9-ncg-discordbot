@@ -15,6 +15,22 @@ namespace C9_NCG_DiscordBot.Handlers
 
         public List<DiscordMessage> messages = new List<DiscordMessage>();
 
+
+        public async Task CustomMessage(CommandContext ctxl, DiscordMessage oldmessage, string title, string description)
+        {
+            var done = DiscordEmoji.FromName(ctxl.Client, ":white_check_mark:");
+
+            var embedmessage = new DiscordEmbedBuilder
+            {
+                Title = title,
+                Description = description,
+                Color = DiscordColor.Red,
+                ThumbnailUrl = ctxl.Client.CurrentUser.AvatarUrl
+            };
+            await ctxl.Channel.SendMessageAsync(embed: embedmessage).ConfigureAwait(false);
+            await oldmessage.DeleteAllReactionsAsync("Done").ConfigureAwait(false);
+            await oldmessage.CreateReactionAsync(done).ConfigureAwait(false);
+        }
         //SHIT ton of duplciate code here, we need to eventually clean this crap.
         #region NCG
         public async Task SnapshotDown(CommandContext ctxl, DiscordMessage oldmessage)
@@ -43,7 +59,7 @@ namespace C9_NCG_DiscordBot.Handlers
             var embedmessage = new DiscordEmbedBuilder
             {
                 Title = "Request has failed",
-                Description = "**" + username + "** I'm sorry something went wrong.\n\nPlease ensure that you provided all the necessary information to use this command.\n\n Use +help if you need assistance.",
+                Description = "**" + username + "** I'm sorry something went wrong.\n\nPlease ensure that you provided all the necessary information to use this command.\n\n Use +helpme if you need assistance.",
                 Color = DiscordColor.Red,
                 ThumbnailUrl = ctxl.Client.CurrentUser.AvatarUrl
             };
@@ -51,7 +67,23 @@ namespace C9_NCG_DiscordBot.Handlers
             await oldmessage.DeleteAllReactionsAsync("Done").ConfigureAwait(false);
             await oldmessage.CreateReactionAsync(done).ConfigureAwait(false);
         }
-        public async Task NormalNCG (CommandContext ctxl, DiscordMessage oldmessage, string username, string result)
+
+        public async Task ProfileFailed(CommandContext ctxl, DiscordMessage oldmessage, string username)
+        {
+            var done = DiscordEmoji.FromName(ctxl.Client, ":white_check_mark:");
+
+            var embedmessage = new DiscordEmbedBuilder
+            {
+                Title = "NCGProfile Failed",
+                Description = "**" + username + "**I was not able to find a NCGProfile under you account\n\nPlease create a NCGProfile first.\n\n +setprofile 'profilename' 'publicaddress'. \n\nUse +helpme if you need assistance in creating a profile.",
+                Color = DiscordColor.Red,
+                ThumbnailUrl = ctxl.Client.CurrentUser.AvatarUrl
+            };
+            await ctxl.Channel.SendMessageAsync(embed: embedmessage).ConfigureAwait(false);
+            await oldmessage.DeleteAllReactionsAsync("Done").ConfigureAwait(false);
+            await oldmessage.CreateReactionAsync(done).ConfigureAwait(false);
+        }
+        public async Task NormalNCG(CommandContext ctxl, DiscordMessage oldmessage, string username, string result)
         {
             var done = DiscordEmoji.FromName(ctxl.Client, ":white_check_mark:");
             var embedmessage = new DiscordEmbedBuilder
@@ -90,7 +122,7 @@ namespace C9_NCG_DiscordBot.Handlers
             }
             catch (Exception) { }
         }
-        public async Task ProfileNCG (CommandContext ctxl, DiscordMessage oldmessage, string username, string result, float increase, string alias)
+        public async Task ProfileNCG(CommandContext ctxl, DiscordMessage oldmessage, string username, string result, float increase, string alias)
         {
             var delete = DiscordEmoji.FromName(ctxl.Client, ":no_entry_sign:");
             var done = DiscordEmoji.FromName(ctxl.Client, ":white_check_mark:");
@@ -98,7 +130,7 @@ namespace C9_NCG_DiscordBot.Handlers
             var embedmessage = new DiscordEmbedBuilder
             {
                 Title = "NCGProfile",
-                Description = "The NCG against the requested 9C-Profile with alias **"+alias+"**  is: **" + result + "**.\n\nThis is an increase of: **" + increase.ToString("0.00") + "** since last request.",
+                Description = "**" + username + "** the NCG against the requested 9C-Profile with alias **" + alias + "**  is: **" + result + "**.\n\nThis is an increase of: **" + increase.ToString("0.00") + "** since last request.",
                 Color = DiscordColor.Green,
                 ThumbnailUrl = ctxl.Client.CurrentUser.AvatarUrl
             };
@@ -137,7 +169,7 @@ namespace C9_NCG_DiscordBot.Handlers
             var embedmessage = new DiscordEmbedBuilder
             {
                 Title = "NCGProfile",
-                Description = "The NCG against the requested 9C-Profile with alias **" + alias + "**  is: **" + result + "**.\n\nThis is an increase of: **" + increase.ToString("0.00") + "** since last request.",
+                Description = "**" + username + "** the NCG against the requested 9C-Profile with alias **" + alias + "**  is: **" + result + "**.\n\nThis is an increase of: **" + increase.ToString("0.00") + "** since last request.",
                 Color = DiscordColor.Green,
                 ThumbnailUrl = ctxl.Client.CurrentUser.AvatarUrl
             };
@@ -177,7 +209,7 @@ namespace C9_NCG_DiscordBot.Handlers
         }
 
         private async Task DeleteMessages(List<DiscordMessage> list)
-        { 
+        {
             foreach (var message in list)
             {
                 await message.DeleteAsync().ConfigureAwait(false);
@@ -232,7 +264,7 @@ namespace C9_NCG_DiscordBot.Handlers
             var embedmessage = new DiscordEmbedBuilder
             {
                 Title = "TipBalance",
-                Description = "**" + username + "**: - The queried profile's tip balance is **"+ profile.Balance+"** Tips.",
+                Description = "**" + username + "**: - The queried profile's tip balance is **" + profile.Balance + "** Tips.",
                 Color = DiscordColor.Green,
                 ThumbnailUrl = ctxl.Client.CurrentUser.AvatarUrl
             };
@@ -241,7 +273,7 @@ namespace C9_NCG_DiscordBot.Handlers
             await oldmessage.CreateReactionAsync(done).ConfigureAwait(false);
         }
 
-        public async Task SuccessFulTip(CommandContext ctxl, DiscordMessage oldmessage, string username,TipModel profile ,string mentionuser, int ammount, float softcap)
+        public async Task SuccessFulTip(CommandContext ctxl, DiscordMessage oldmessage, string username, TipModel profile, string mentionuser, int ammount, float softcap)
         {
             var done = DiscordEmoji.FromName(ctxl.Client, ":white_check_mark:");
             float balance;
@@ -253,7 +285,7 @@ namespace C9_NCG_DiscordBot.Handlers
             var embedmessage = new DiscordEmbedBuilder
             {
                 Title = "TipRequest",
-                Description = "**" + username + "**: - I have **Succesfully** processed your request: \n\n Tip to **"+mentionuser+"** amount of **"+ammount+"** Tips.\n\nYou still have **" + balance + "** Tips.",
+                Description = "**" + username + "**: - I have **Succesfully** processed your request: \n\n Tip to **" + mentionuser + "** amount of **" + ammount + "** Tips.\n\nYou still have **" + balance + "** Tips.",
                 Color = DiscordColor.Green,
                 ThumbnailUrl = ctxl.Client.CurrentUser.AvatarUrl
             };
@@ -269,7 +301,7 @@ namespace C9_NCG_DiscordBot.Handlers
             var embedmessage = new DiscordEmbedBuilder
             {
                 Title = "Admin Balance",
-                Description = "**" + username + "**: - I have **Succesfully** processed your request: \n\nThere's still **"+value+"** left in the Admin Pot",
+                Description = "**" + username + "**: - I have **Succesfully** processed your request: \n\nThere's still **" + value + "** left in the Admin Pot",
                 Color = DiscordColor.Green,
                 ThumbnailUrl = ctxl.Client.CurrentUser.AvatarUrl
             };
@@ -284,13 +316,13 @@ namespace C9_NCG_DiscordBot.Handlers
             var embedmessage = new DiscordEmbedBuilder
             {
                 Title = "Tip Withdrawal",
-                Description = "**<@" + profile.DiscordUserId + ">**: - I have **Succesfully** processed your withdrawal:\n\nYour TransactionId(txid) is: **[" + txid + "](https://explorer.libplanet.io/9c-main/transaction/?"+txid+")**\n\n",
+                Description = "**<@" + profile.DiscordUserId + ">**: - I have **Succesfully** processed your withdrawal:\n\nYour TransactionId(txid) is: **[" + txid + "](https://explorer.libplanet.io/9c-main/transaction/?" + txid + ")**\n\n",
                 Color = DiscordColor.Green,
                 ThumbnailUrl = "https://cdn.discordapp.com/avatars/826378705185538059/44f64314271603e6e5ed5ddd60b63ead.png"
             };
             DiscordChannel channel = await client.GetChannelAsync(829007486479499315);
             await client.SendMessageAsync(channel, embed: embedmessage).ConfigureAwait(false);
-            var ping = await client.SendMessageAsync(channel,"<@"+profile.DiscordUserId+ ">").ConfigureAwait(false);
+            var ping = await client.SendMessageAsync(channel, "<@" + profile.DiscordUserId + ">").ConfigureAwait(false);
             await ping.DeleteAsync("PingSent");
         }
 
@@ -390,6 +422,446 @@ namespace C9_NCG_DiscordBot.Handlers
             await ctxl.Channel.SendMessageAsync(embed: embedmessage).ConfigureAwait(false);
             await oldmessage.DeleteAllReactionsAsync("Done").ConfigureAwait(false);
             await oldmessage.CreateReactionAsync(done).ConfigureAwait(false);
+        }
+
+        public async Task TopTupStarded(CommandContext ctxl, DiscordMessage oldmessage, string username)
+        {
+
+            var embedmessage = new DiscordEmbedBuilder
+            {
+                Title = "Tip Top Up",
+                Description = "**" + username + "**: - I have received a **Top-up request**.\n\nPlease send the top-up to **0x6AEbea29B88a4b6BB21B877bb6b0E6C6F8C247B8**.\n\nI will check for 1 NCG transaction to arrive from your indicated address for the next 20minutes.",
+                Color = DiscordColor.Yellow,
+                ThumbnailUrl = ctxl.Client.CurrentUser.AvatarUrl
+            };
+            await ctxl.Channel.SendMessageAsync(embed: embedmessage).ConfigureAwait(false);
+        }
+
+        public async Task TopTupDone(CommandContext ctxl, DiscordMessage oldmessage, string username, int value)
+        {
+            var done = DiscordEmoji.FromName(ctxl.Client, ":white_check_mark:");
+
+            var embedmessage = new DiscordEmbedBuilder
+            {
+                Title = "Tip Top Up",
+                Description = "**" + username + "**: - **Top-up Succesful**, your TipBalance has been increased by **" + value + "** tips.",
+                Color = DiscordColor.Green,
+                ThumbnailUrl = ctxl.Client.CurrentUser.AvatarUrl
+            };
+            await ctxl.Channel.SendMessageAsync(embed: embedmessage).ConfigureAwait(false);
+            await oldmessage.DeleteAllReactionsAsync("Done").ConfigureAwait(false);
+            await oldmessage.CreateReactionAsync(done).ConfigureAwait(false);
+        }
+        #endregion
+
+
+        #region RepSystem
+        public async Task<bool> RepCheck(CommandContext ctxl, string username, string mentionedUser)
+        {
+            //Check Message
+
+            var embedmessage = new DiscordEmbedBuilder
+            {
+                Title = "Transaction Check",
+                Description = "Hi <@" + mentionedUser + ">\n\nUser " + username + " has reported that a Succesful NCG transaction has occured.\n\nPress :white_check_mark: to confirm\n\n Press :no_entry_sign: to deny.",
+                Color = DiscordColor.Yellow,
+                ThumbnailUrl = ctxl.Client.CurrentUser.AvatarUrl
+            };
+
+            var sendmessage = await ctxl.Channel.SendMessageAsync(embed: embedmessage).ConfigureAwait(false);
+
+            var no = DiscordEmoji.FromName(ctxl.Client, ":no_entry_sign:");
+
+            var yes = DiscordEmoji.FromName(ctxl.Client, ":white_check_mark:");
+
+            await sendmessage.CreateReactionAsync(yes).ConfigureAwait(false);
+            await sendmessage.CreateReactionAsync(no).ConfigureAwait(false);
+
+            var interactivity = ctxl.Client.GetInteractivityModule();
+
+            var reactionresult = await interactivity.WaitForMessageReactionAsync(x => x.Name == yes || x.Name == no, sendmessage, ctxl.User).ConfigureAwait(false);
+
+            Console.WriteLine(reactionresult.Emoji.ToString());
+
+            if (reactionresult.Emoji == yes)
+            {
+                return true;
+            }
+            else if (reactionresult.Emoji == no)
+            {
+                return false;
+            }
+            return false;
+        }
+        #endregion
+
+        #region BlockReports
+        public async Task YesterdayBlockReport(CommandContext ctxl, DiscordMessage oldmessage, string username, int result, string alias)
+        {
+            var done = DiscordEmoji.FromName(ctxl.Client, ":white_check_mark:");
+            var embedmessage = new DiscordEmbedBuilder
+            {
+                Title = "Block Report",
+                Description = "**" + username + "** You have mined **" + result + "** block yesterday on profile **"+alias+"**.\n\nThis is **"+result*10+"** NCG.",
+                Color = DiscordColor.Green,
+                ThumbnailUrl = ctxl.Client.CurrentUser.AvatarUrl
+            };
+
+            var sendmessage = await ctxl.Channel.SendMessageAsync(embed: embedmessage).ConfigureAwait(false);
+
+            var delete = DiscordEmoji.FromName(ctxl.Client, ":no_entry_sign:");
+
+            await sendmessage.CreateReactionAsync(delete).ConfigureAwait(false);
+
+            var interactivity = ctxl.Client.GetInteractivityModule();
+
+            var reactionresult = await interactivity.WaitForMessageReactionAsync(x => x.Name == delete, sendmessage, ctxl.User).ConfigureAwait(false);
+
+            try
+            {
+                if (reactionresult is null)
+                {
+                    Console.WriteLine("Time");
+                    await sendmessage.DeleteAllReactionsAsync("TimedOut").ConfigureAwait(false);
+                    await oldmessage.DeleteAllReactionsAsync("Done").ConfigureAwait(false);
+                    await oldmessage.CreateReactionAsync(done).ConfigureAwait(false);
+                }
+                else if (reactionresult.Emoji == delete)
+                {
+                    await sendmessage.DeleteAsync().ConfigureAwait(false);
+                    await oldmessage.DeleteAllReactionsAsync("Done").ConfigureAwait(false);
+                    await oldmessage.CreateReactionAsync(done).ConfigureAwait(false);
+                }
+            }
+            catch (Exception) { }
+        }
+
+        public async Task<List<DiscordMessage>> YesterdayReportALL(CommandContext ctxl, DiscordMessage oldmessage, string username, int result, string alias, int arraylength, int arrayentry, List<DiscordMessage> messagelist)
+        {
+            var delete = DiscordEmoji.FromName(ctxl.Client, ":no_entry_sign:");
+            var done = DiscordEmoji.FromName(ctxl.Client, ":white_check_mark:");
+
+
+            var embedmessage = new DiscordEmbedBuilder
+            {
+                Title = "Block Report",
+                Description = "**" + username + "** You have mined **" + result + "** block yesterday on profile **" + alias + "**.\n\nThis is **" + result * 10 + "** NCG.",
+                Color = DiscordColor.Green,
+                ThumbnailUrl = ctxl.Client.CurrentUser.AvatarUrl
+            };
+            var sendmessage = await ctxl.Channel.SendMessageAsync(embed: embedmessage).ConfigureAwait(false);
+            messagelist.Add(sendmessage);
+
+            if (arraylength == arrayentry)
+            {
+                await sendmessage.CreateReactionAsync(delete).ConfigureAwait(false);
+                var interactivity = ctxl.Client.GetInteractivityModule();
+                var reactionresult = await interactivity.WaitForMessageReactionAsync(x => x.Name == delete, sendmessage, ctxl.User).ConfigureAwait(false);
+                try
+                {
+                    if (reactionresult is null)
+                    {
+                        await sendmessage.DeleteAllReactionsAsync("TimedOut").ConfigureAwait(false);
+                        await oldmessage.DeleteAllReactionsAsync("Done").ConfigureAwait(false);
+                        await oldmessage.CreateReactionAsync(done).ConfigureAwait(false);
+                    }
+                    else if (reactionresult.Emoji == delete)
+                    {
+                        await oldmessage.DeleteAllReactionsAsync("Done").ConfigureAwait(false);
+                        await oldmessage.CreateReactionAsync(done).ConfigureAwait(false);
+                        await DeleteMessages(messagelist);
+                    }
+                }
+                catch (Exception)
+                {
+                }
+            }
+            else
+            {
+                Console.WriteLine("Not Done yet");
+                return messagelist;
+            }
+            return null;
+        }
+
+        public async Task WeekBlockReport(CommandContext ctxl, DiscordMessage oldmessage, string username, int result, string alias)
+        {
+            var done = DiscordEmoji.FromName(ctxl.Client, ":white_check_mark:");
+            var embedmessage = new DiscordEmbedBuilder
+            {
+                Title = "Block Report",
+                Description = "**" + username + "** You have mined **" + result + "** block last 7 on profile"+alias+".\n\nThis is **" + result * 10 + "** NCG.\n\nThis is excluding today.",
+                Color = DiscordColor.Green,
+                ThumbnailUrl = ctxl.Client.CurrentUser.AvatarUrl
+            };
+
+            var sendmessage = await ctxl.Channel.SendMessageAsync(embed: embedmessage).ConfigureAwait(false);
+
+            var delete = DiscordEmoji.FromName(ctxl.Client, ":no_entry_sign:");
+
+            await sendmessage.CreateReactionAsync(delete).ConfigureAwait(false);
+
+            var interactivity = ctxl.Client.GetInteractivityModule();
+
+            var reactionresult = await interactivity.WaitForMessageReactionAsync(x => x.Name == delete, sendmessage, ctxl.User).ConfigureAwait(false);
+
+            try
+            {
+                if (reactionresult is null)
+                {
+                    Console.WriteLine("Time");
+                    await sendmessage.DeleteAllReactionsAsync("TimedOut").ConfigureAwait(false);
+                    await oldmessage.DeleteAllReactionsAsync("Done").ConfigureAwait(false);
+                    await oldmessage.CreateReactionAsync(done).ConfigureAwait(false);
+                }
+                else if (reactionresult.Emoji == delete)
+                {
+                    await sendmessage.DeleteAsync().ConfigureAwait(false);
+                    await oldmessage.DeleteAllReactionsAsync("Done").ConfigureAwait(false);
+                    await oldmessage.CreateReactionAsync(done).ConfigureAwait(false);
+                }
+            }
+            catch (Exception) { }
+        }
+
+        public async Task<List<DiscordMessage>> WeekBlockReportALL(CommandContext ctxl, DiscordMessage oldmessage, string username, int result, string alias, int arraylength, int arrayentry, List<DiscordMessage> messagelist)
+        {
+            var delete = DiscordEmoji.FromName(ctxl.Client, ":no_entry_sign:");
+            var done = DiscordEmoji.FromName(ctxl.Client, ":white_check_mark:");
+
+
+            var embedmessage = new DiscordEmbedBuilder
+            {
+                Title = "Block Report",
+                Description = "**" + username + "** You have mined **" + result + "** block last 7 on profile" + alias + ".\n\nThis is **" + result * 10 + "** NCG.\n\nThis is excluding today.",
+                Color = DiscordColor.Green,
+                ThumbnailUrl = ctxl.Client.CurrentUser.AvatarUrl
+            };
+            var sendmessage = await ctxl.Channel.SendMessageAsync(embed: embedmessage).ConfigureAwait(false);
+            messagelist.Add(sendmessage);
+
+            if (arraylength == arrayentry)
+            {
+                await sendmessage.CreateReactionAsync(delete).ConfigureAwait(false);
+                var interactivity = ctxl.Client.GetInteractivityModule();
+                var reactionresult = await interactivity.WaitForMessageReactionAsync(x => x.Name == delete, sendmessage, ctxl.User).ConfigureAwait(false);
+                try
+                {
+                    if (reactionresult is null)
+                    {
+                        await sendmessage.DeleteAllReactionsAsync("TimedOut").ConfigureAwait(false);
+                        await oldmessage.DeleteAllReactionsAsync("Done").ConfigureAwait(false);
+                        await oldmessage.CreateReactionAsync(done).ConfigureAwait(false);
+                    }
+                    else if (reactionresult.Emoji == delete)
+                    {
+                        await oldmessage.DeleteAllReactionsAsync("Done").ConfigureAwait(false);
+                        await oldmessage.CreateReactionAsync(done).ConfigureAwait(false);
+                        await DeleteMessages(messagelist);
+                    }
+                }
+                catch (Exception)
+                {
+                }
+            }
+            else
+            {
+                Console.WriteLine("Not Done yet");
+                return messagelist;
+            }
+            return null;
+        }
+
+        public async Task MonthBlockReport(CommandContext ctxl, DiscordMessage oldmessage, string username, int result, string alias)
+        {
+            var done = DiscordEmoji.FromName(ctxl.Client, ":white_check_mark:");
+            var embedmessage = new DiscordEmbedBuilder
+            {
+                Title = "Block Report",
+                Description = "**" + username + "** You have mined **" + result + "** block last 30days on profile **"+alias+"**.\n\nThis is **" + result * 10 + "** NCG.\n\nThis is excluding today",
+                Color = DiscordColor.Green,
+                ThumbnailUrl = ctxl.Client.CurrentUser.AvatarUrl
+            };
+
+            var sendmessage = await ctxl.Channel.SendMessageAsync(embed: embedmessage).ConfigureAwait(false);
+
+            var delete = DiscordEmoji.FromName(ctxl.Client, ":no_entry_sign:");
+
+            await sendmessage.CreateReactionAsync(delete).ConfigureAwait(false);
+
+            var interactivity = ctxl.Client.GetInteractivityModule();
+
+            var reactionresult = await interactivity.WaitForMessageReactionAsync(x => x.Name == delete, sendmessage, ctxl.User).ConfigureAwait(false);
+
+            try
+            {
+                if (reactionresult is null)
+                {
+                    Console.WriteLine("Time");
+                    await sendmessage.DeleteAllReactionsAsync("TimedOut").ConfigureAwait(false);
+                    await oldmessage.DeleteAllReactionsAsync("Done").ConfigureAwait(false);
+                    await oldmessage.CreateReactionAsync(done).ConfigureAwait(false);
+                }
+                else if (reactionresult.Emoji == delete)
+                {
+                    await sendmessage.DeleteAsync().ConfigureAwait(false);
+                    await oldmessage.DeleteAllReactionsAsync("Done").ConfigureAwait(false);
+                    await oldmessage.CreateReactionAsync(done).ConfigureAwait(false);
+                }
+            }
+            catch (Exception) { }
+        }
+
+        public async Task<List<DiscordMessage>> MonthBlockReportALL(CommandContext ctxl, DiscordMessage oldmessage, string username, int result, string alias, int arraylength, int arrayentry, List<DiscordMessage> messagelist)
+        {
+            var delete = DiscordEmoji.FromName(ctxl.Client, ":no_entry_sign:");
+            var done = DiscordEmoji.FromName(ctxl.Client, ":white_check_mark:");
+
+            var embedmessage = new DiscordEmbedBuilder
+            {
+                Title = "Block Report",
+                Description = "**" + username + "** You have mined **" + result + "** block last 30days on profile **" + alias + "**.\n\nThis is **" + result * 10 + "** NCG.\n\nThis is excluding today",
+                Color = DiscordColor.Green,
+                ThumbnailUrl = ctxl.Client.CurrentUser.AvatarUrl
+            };
+
+            var sendmessage = await ctxl.Channel.SendMessageAsync(embed: embedmessage).ConfigureAwait(false);
+            messagelist.Add(sendmessage);
+
+            if (arraylength == arrayentry)
+            {
+                await sendmessage.CreateReactionAsync(delete).ConfigureAwait(false);
+                var interactivity = ctxl.Client.GetInteractivityModule();
+                var reactionresult = await interactivity.WaitForMessageReactionAsync(x => x.Name == delete, sendmessage, ctxl.User).ConfigureAwait(false);
+                try
+                {
+                    if (reactionresult is null)
+                    {
+                        await sendmessage.DeleteAllReactionsAsync("TimedOut").ConfigureAwait(false);
+                        await oldmessage.DeleteAllReactionsAsync("Done").ConfigureAwait(false);
+                        await oldmessage.CreateReactionAsync(done).ConfigureAwait(false);
+                    }
+                    else if (reactionresult.Emoji == delete)
+                    {
+                        await oldmessage.DeleteAllReactionsAsync("Done").ConfigureAwait(false);
+                        await oldmessage.CreateReactionAsync(done).ConfigureAwait(false);
+                        await DeleteMessages(messagelist);
+                    }
+                }
+                catch (Exception)
+                {
+                }
+            }
+            else
+            {
+                Console.WriteLine("Not Done yet");
+                return messagelist;
+            }
+            return null;
+        }
+
+        public async Task NoBlockHistory(CommandContext ctxl, DiscordMessage oldmessage, string username, string alias)
+        {
+            var done = DiscordEmoji.FromName(ctxl.Client, ":white_check_mark:");
+            var embedmessage = new DiscordEmbedBuilder
+            {
+                Title = "Block Report",
+                Description = "**" + username + "** I was unable to find any recent mining history for the profile **"+alias+"**.",
+                Color = DiscordColor.Red,
+                ThumbnailUrl = ctxl.Client.CurrentUser.AvatarUrl
+            };
+
+            var sendmessage = await ctxl.Channel.SendMessageAsync(embed: embedmessage).ConfigureAwait(false);
+
+            var delete = DiscordEmoji.FromName(ctxl.Client, ":no_entry_sign:");
+
+            await sendmessage.CreateReactionAsync(delete).ConfigureAwait(false);
+
+            var interactivity = ctxl.Client.GetInteractivityModule();
+
+            var reactionresult = await interactivity.WaitForMessageReactionAsync(x => x.Name == delete, sendmessage, ctxl.User).ConfigureAwait(false);
+
+            try
+            {
+                if (reactionresult is null)
+                {
+                    Console.WriteLine("Time");
+                    await sendmessage.DeleteAllReactionsAsync("TimedOut").ConfigureAwait(false);
+                    await oldmessage.DeleteAllReactionsAsync("Done").ConfigureAwait(false);
+                    await oldmessage.CreateReactionAsync(done).ConfigureAwait(false);
+                }
+                else if (reactionresult.Emoji == delete)
+                {
+                    await sendmessage.DeleteAsync().ConfigureAwait(false);
+                    await oldmessage.DeleteAllReactionsAsync("Done").ConfigureAwait(false);
+                    await oldmessage.CreateReactionAsync(done).ConfigureAwait(false);
+                }
+            }
+            catch (Exception) { }
+
+        }
+
+        public async Task Warning(CommandContext ctxl, DiscordMessage oldmessage, string username, int duration)
+        {
+            var done = DiscordEmoji.FromName(ctxl.Client, ":white_check_mark:");
+            var embedmessage = new DiscordEmbedBuilder
+            {
+                Title = "NCGReport Warning",
+                Description = "**" + username + "** depending how much you mine, this can take a while.\n\n**Up to "+duration+" minutes, please be patient**.",
+                Color = DiscordColor.Yellow,
+                ThumbnailUrl = ctxl.Client.CurrentUser.AvatarUrl
+            };
+
+            var sendmessage = await ctxl.Channel.SendMessageAsync(embed: embedmessage).ConfigureAwait(false);
+
+        }
+
+        public async Task WarningTransfer(DiscordClient client,string userkey)
+        {
+ 
+            var embedmessage = new DiscordEmbedBuilder
+            {
+                Title = "**WARNING**",
+                Description = "**BlackListed Address**: "+userkey+" has transfered it's gold.",
+                Color = DiscordColor.Yellow,
+                ThumbnailUrl = client.CurrentUser.AvatarUrl
+            };
+            DiscordChannel channel = await client.GetChannelAsync(826783795842777102);
+            var sendmessage = await channel.SendMessageAsync(embed: embedmessage).ConfigureAwait(false);
+            await channel.SendMessageAsync("<@145915312343220224>");
+            await channel.SendMessageAsync("<@98809406824673280>");
+            await channel.SendMessageAsync("<@293411782561628160>");
+
+        }
+
+        public async Task FullBlockReport(CommandContext ctxl, DiscordMessage oldmessage, string username, BlockReportModel[] list)
+        {
+
+            var size = list.Length;
+            //set of 50;
+            var set = (size / 20) + 1;
+            int offset = 0;
+            for (int y = 0; y < set; y++)
+            {
+                string description = String.Empty;
+                for (int i = 0; i <= 20; i++)
+                {
+
+                    description += "Key: " + list[i+offset].PublicKey + " Total: " + list[i+offset].Blocks;
+                }
+
+                var embedmessage = new DiscordEmbedBuilder
+                {
+                    Title = "Block Report",
+                    Description = "**" + username + "** please find the report below;\n\n\n" + description,
+                    Color = DiscordColor.Green,
+                    ThumbnailUrl = ctxl.Client.CurrentUser.AvatarUrl
+                };
+
+                var sendmessage = await ctxl.Channel.SendMessageAsync(embed: embedmessage).ConfigureAwait(false);
+                offset += 20;
+            }
+            var done = DiscordEmoji.FromName(ctxl.Client, ":white_check_mark:");
         }
         #endregion
     }

@@ -13,6 +13,9 @@ using C9_NCG_DiscordBot.Models;
 using DSharpPlus.Interactivity;
 using C9_NCG_DiscordBot.Handlers;
 using static C9_NCG_DiscordBot.Enums.TipEnums;
+using C9_NCG_DiscordBot.Handlers.Steps;
+using System.Diagnostics;
+using System.Threading;
 
 namespace C9_NCG_DiscordBot.Commands
 {
@@ -212,35 +215,86 @@ namespace C9_NCG_DiscordBot.Commands
         {
             if (ctx.Guild.Id == 539405872346955788)
             {
-                if (key == null || !key.Contains("0x") || amount <= 0)
-                {
-                    //provide valid key.
-                    Console.WriteLine("Invalid Data");
-                }
                 var profile = new TipModel();
                 var comms = new Communication();
                 var username = ctx.Member.Username;
                 var eyes = DiscordEmoji.FromName(ctx.Client, ":eyes:");
                 var oldmessage = ctx.Message;
-                await ctx.Message.CreateReactionAsync(eyes).ConfigureAwait(false);
-                profile = await Tips.ProfileExistsNew(ctx.Member.Id);
-                if (profile.Balance >= amount)
+
+                if (key == null || !key.Contains("0x") || amount <= 0)
                 {
-                    bool state = await Tips.QueueTips(profile, key, amount, ctx.Member.Id);
-                    if (!state)
-                    {
-                        await comms.GenericError(ctx, oldmessage, username);
-                    }
-                    else
-                    {
-                        //get new balance
-                        profile = await Tips.ProfileExistsNew(ctx.Member.Id);
-                        await comms.RedeemQueue(ctx, oldmessage, username, profile.Balance);
-                    }
+                    //provide valid key.
+                    await comms.GenericError(ctx, oldmessage, username);
                 }
                 else
                 {
-                    await comms.NotEnoughBalance(ctx, oldmessage, ctx.Member.Username);
+                    Console.WriteLine("Valid Data");
+                    await ctx.Message.CreateReactionAsync(eyes).ConfigureAwait(false);
+                    profile = await Tips.ProfileExistsNew(ctx.Member.Id);
+                    if (profile.Balance >= amount)
+                    {
+                        bool state = await Tips.QueueTips(profile, key, amount, ctx.Member.Id);
+                        if (!state)
+                        {
+                            await comms.GenericError(ctx, oldmessage, username);
+                        }
+                        else
+                        {
+                            //get new balance
+                            profile = await Tips.ProfileExistsNew(ctx.Member.Id);
+                            await comms.RedeemQueue(ctx, oldmessage, username, profile.Balance);
+                        }
+                    }
+                    else
+                    {
+                        await comms.NotEnoughBalance(ctx, oldmessage, ctx.Member.Username);
+                    }
+                }
+            }
+        }
+
+        [Command("tiptopup")]
+        [Description("Top Up your Tips")]
+        [Cooldown(1, 15, CooldownBucketType.User)]
+        public async Task TipTopUp(CommandContext ctx, string key = null)
+        {
+            var profile = new TipModel();
+            var comms = new Communication();
+            var username = ctx.Member.Username;
+            var eyes = DiscordEmoji.FromName(ctx.Client, ":eyes:");
+            var oldmessage = ctx.Message;
+            SqliteDataAccess db = new SqliteDataAccess();
+
+            if (key == null || !key.Contains("0x"))
+            {
+                //provide valid key.
+                await comms.GenericError(ctx, oldmessage, username);
+            }
+            else
+            {
+                Console.WriteLine("Valid TopUp Request");
+                comms.TopTupStarded(ctx, oldmessage, username);
+                await ctx.Message.CreateReactionAsync(eyes).ConfigureAwait(false);
+                profile = await Tips.ProfileExistsNew(ctx.Member.Id);
+                if (profile.Id > 0)
+                {
+                   int result = 0;
+                   for (int i = 0; i < 100; i++)
+                   {
+                       var topup = NCG.TipImport(key, "0x6AEbea29B88a4b6BB21B877bb6b0E6C6F8C247B8");
+                        if (topup.Result > 0)
+                        {
+                            i = 100;
+                            result = topup.Result;
+                        }
+                        var sw1 = Stopwatch.StartNew();
+                        for (int ix = 0; ix < 50; ++ix) Thread.Sleep(1000);
+                        sw1.Stop();
+                   }
+                    Console.WriteLine("We received a topup from " + key + " with value of " + result);
+                    db.UpdateTipbalance(profile, profile.Balance + result);
+                    db.DumpTransfer("TopUp", profile, profile, result);
+                    comms.TopTupDone(ctx, oldmessage, username, result);
                 }
             }
         }

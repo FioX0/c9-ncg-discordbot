@@ -23,7 +23,7 @@ namespace C9_NCG_DiscordBot.Handlers
             _currentStep = startingstep;
         }
 
-        public static readonly List<DiscordMessage> messages = new List<DiscordMessage>();
+        public static List<DiscordMessage> messages = new List<DiscordMessage>();
 
         public async Task<bool> ProcessDialogue()
         {
@@ -39,7 +39,7 @@ namespace C9_NCG_DiscordBot.Handlers
 
                     var cancelEmbed = new DiscordEmbedBuilder
                     {
-                        Title = "Cancelled"
+                        Title = "Help no longer required"
                     };
                     await _channel.SendMessageAsync(embed: cancelEmbed).ConfigureAwait(false);
                     return false;
@@ -59,6 +59,7 @@ namespace C9_NCG_DiscordBot.Handlers
             {
                 await message.DeleteAsync().ConfigureAwait(false);
             }
+            messages.Clear();
         }
     }
 }

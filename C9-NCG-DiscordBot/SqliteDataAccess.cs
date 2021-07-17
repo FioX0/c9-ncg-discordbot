@@ -54,6 +54,7 @@ namespace C9_NCG_DiscordBot
             }
             return null;
         }
+
         public static bool SaveProfile(ProfileModel profile)
         {
             using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
@@ -84,7 +85,7 @@ namespace C9_NCG_DiscordBot
                 string query = "Select ID from NCGProfile WHERE DiscordId = @id and alias =@alias;";
                 try
                 {
-                    int output = cnn.QueryFirst<int>(query, new { id = profile.Id, alias = profile.alias});
+                    int output = cnn.QueryFirst<int>(query, new { id = profile.Id, alias = profile.alias });
                     Console.WriteLine(output);
                     return output;
                 }
@@ -108,7 +109,6 @@ namespace C9_NCG_DiscordBot
             }
         }
         #endregion
-
 
         #region TipSystem
         public async Task<bool> CreateTipProfile(TipModel profile)
@@ -163,7 +163,7 @@ namespace C9_NCG_DiscordBot
             string sql = "UPDATE TipProfile SET Balance = @balance WHERE Id = @id;";
             using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
             {
-                var affectedRows = cnn.Execute(sql, new { balance = newBalance, id = id}); 
+                var affectedRows = cnn.Execute(sql, new { balance = newBalance, id = id });
                 Console.WriteLine("Affected Rows: " + affectedRows);
                 if (affectedRows > 0)
                     return true;
@@ -216,7 +216,7 @@ namespace C9_NCG_DiscordBot
                 {
                     id = userid,
                     id2 = mentionid,
-                    text = "[" + state + "] " + "UserId: " + userid + " has cashed out "+amount+ " tips.",
+                    text = "[" + state + "] " + "UserId: " + userid + " has cashed out " + amount + " tips.",
                     ornew = 0,
                     orold = 0,
                     desnew = 0,
@@ -233,8 +233,8 @@ namespace C9_NCG_DiscordBot
         {
             string sql = "UPDATE TipProfile SET Role = @role WHERE DiscordId = @id";
             using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
-            { 
-                var affectedRows = cnn.Execute(sql, new { role = role, id = discordid}); ;
+            {
+                var affectedRows = cnn.Execute(sql, new { role = role, id = discordid }); ;
 
                 if (affectedRows > 0)
                     return true;
@@ -245,7 +245,7 @@ namespace C9_NCG_DiscordBot
 
         public async Task<string> AdminBalance()
         {
-            string output ="";
+            string output = "";
             try
             {
                 string query = "Select sum(Balance) from TipProfile;";
@@ -259,7 +259,7 @@ namespace C9_NCG_DiscordBot
             return null;
         }
 
-        public async Task<bool> QueueWithdraw(TipModel profile, ulong discordid, string key, float amount, int authorised, int attempt =0)
+        public async Task<bool> QueueWithdraw(TipModel profile, ulong discordid, string key, float amount, int authorised, int attempt = 0)
         {
 
 
@@ -285,8 +285,6 @@ namespace C9_NCG_DiscordBot
 
         public async Task<bool> RemoveWithdrawl(PaymentModel profile)
         {
-
-
             string sql = "delete from PaymentQueue where id = @id;";
             using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
             {
@@ -308,7 +306,7 @@ namespace C9_NCG_DiscordBot
                 string query = "Select * from PaymentQueue WHERE Authorised = @id LIMIT 1;";
                 using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
                 {
-                    output = cnn.QueryFirst<PaymentModel>(query, new { id = randomid});
+                    output = cnn.QueryFirst<PaymentModel>(query, new { id = randomid });
                     return output;
                 }
             }
@@ -330,6 +328,206 @@ namespace C9_NCG_DiscordBot
                 else
                     return false;
             }
+        }
+
+        public async Task<int> TipRedeemEnabled()
+        {
+            int output = 0;
+            try
+            {
+                string query = "Select Enabled from Config where Application = 'TipRedeem';";
+                using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+                {
+                    output = cnn.QueryFirst<int>(query);
+                    return output;
+                }
+            }
+            catch { };
+            return 0;
+        }
+
+        public async Task<bool> UpdateTipRedeemStatus(int status)
+        {
+            string sql = "UPDATE Config SET Enabled = @value WHERE Application = 'TipRedeem'";
+            using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+            {
+                var affectedRows = cnn.Execute(sql, new { value = status}); ;
+
+                if (affectedRows > 0)
+                    return true;
+                else
+                    return false;
+            }
+        }
+
+        public async Task<int> TipTopUpIDCheck(string ID)
+        {
+            int output;
+            try
+            {
+                string query = "Select * from TipTopUp WHERE TransactionId = @id;";
+                using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+                {
+                    output = cnn.QueryFirst<int>(query, new { id = ID });
+                    return output;
+                }
+
+            }
+            catch { };
+            return 0;
+        }
+
+        public async Task<bool> TipTopUpAdd(string ID, string sender)
+        {
+            string sql = "insert into TipTopUp (TransactionId,Sender, DateTime) values (@TransactionId, @Sender, @Date);";
+            using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+            {
+                var affectedRows = cnn.Execute(sql, new
+                {
+                    TransactionId = ID,
+                    Sender = sender,
+                    Date = DateTime.UtcNow
+                });
+                if (affectedRows > 0)
+                    return true;
+                else
+                    return false;
+            }
+        }
+
+
+
+#endregion
+
+#region RepSystem
+public static async Task<RepModel> LoadRepProfile(string discordid)
+        {
+
+                using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+                {
+                    try
+                    {
+                        string query = "Select * from Reputation  WHERE DiscordId = @id";
+                        var output = cnn.QueryFirst<RepModel>(query, new { id = discordid });
+                        return output;
+                    }
+                    catch (Exception) { }
+                }
+
+            var fail = new RepModel();
+            return fail;
+        }
+
+
+        public static async Task<bool> CreateRepProfile(string discordid)
+        {
+            using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+            {
+                cnn.Execute("insert into Reputation (UserId,PublicKey,Transactions,ComRep,TradeRep) values (@discordid, '', 0 , 0, 0);");
+                return true;
+            }
+        }
+        #endregion
+
+        #region BlockReport
+        public static async Task<bool> blockreport(string miner, int blocks)
+        {
+
+            string sql = "insert into BlockReport (PublicKey,Blocks) values (@miner,@blocks);";
+            using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+            {
+                var affectedRows = cnn.Execute(sql, new
+                {
+                    miner = miner,
+                    blocks = blocks
+                });
+                if (affectedRows > 0)
+                    return true;
+                else
+                    return false;
+            }
+        }
+
+        public static async Task Deleteblockreport()
+        {
+
+            string sql = "DELETE FROM BlockReport;";
+            using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+            {
+                var affectedRows = cnn.Execute(sql);
+            }
+        }
+
+        public static async Task<BlockReportModel[]> GetBlockReportData()
+        {
+            using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+            {
+                try
+                {
+                    var sql = @"Select * from BlockReport Order by Blocks Desc;";
+
+                    using (var multi = cnn.QueryMultiple(sql))
+                    {
+                        var customer = multi.Read<BlockReportModel>().ToArray();
+                        return customer;
+                    }
+                }
+                catch (Exception) { }
+            }
+            return null;
+        }
+
+        public static async Task<int> GetBlockBlockCount()
+        {
+            using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+            {
+                string query = "Select SUM(blocks) from BlockReport;";
+                try
+                {
+                    int output = cnn.QueryFirst<int>(query);
+                    Console.WriteLine(output);
+                    return output;
+                }
+                catch { };
+                return 0;
+            }
+        }
+
+        public static async Task<bool> UpdateBlockBlockCount(string id, string blocks)
+        {
+            string sql = "UPDATE BlockReport SET Control = @value WHERE PublicKey = @id;";
+            using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+            {
+
+                var affectedRows = cnn.Execute(sql, new { value = blocks, id = id }); ;
+
+                if (affectedRows > 0)
+                    return true;
+                else
+                    return false;
+            }
+        }
+        #endregion
+
+        #region UnionMiner
+
+        public async Task<ProfileModel[]> LoadALLUnionMiners()
+        {
+                using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+                {
+                    try
+                    {
+                        var sql = @"Select * from NCGProfile WHERE Union = 1;";
+
+                        using (var multi = cnn.QueryMultiple(sql))
+                        {
+                            var customer = multi.Read<ProfileModel>().ToArray();
+                            return customer;
+                        }
+                    }
+                    catch (Exception) { }
+                }
+                return null;
         }
         #endregion
     }

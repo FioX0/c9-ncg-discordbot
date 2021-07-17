@@ -216,44 +216,103 @@ namespace C9_NCG_DiscordBot.TipSystem
         {
             var db = new SqliteDataAccess();
             var comms = new Communication();
+            var ncg = new NCG();
+            Console.WriteLine("PaymentProcessor Enabled");
+            await ChainReady (ncg, db);
             while(true)
             {
                 //every 2 minutes we take 1 payment to process.
                 var sw1 = Stopwatch.StartNew();
-                for (int ix = 0; ix < 120; ++ix) Thread.Sleep(1000);
+                for (int ix = 0; ix < 30; ++ix) Thread.Sleep(1000);
                 sw1.Stop();
-                Console.WriteLine("Sleep: {0}", sw1.ElapsedMilliseconds);
-
-                PaymentModel paymentprofile = await db.CheckPaymentQueue();
-                TipModel profile = await db.LoadTipProfileForBalance(paymentprofile.DiscordUserId.ToString());
-
-                if (paymentprofile.Id != 0)
+                //Console.WriteLine("Sleep: {0}", sw1.ElapsedMilliseconds);
+                //are we good to proceed?
+                await ChainReady(ncg, db);
+                var enabled = db.TipRedeemEnabled();
+                if(enabled.Result == 1 && ncg.NCGGold("0x6AEbea29B88a4b6BB21B877bb6b0E6C6F8C247B8") != null)
                 {
-                    var ncg = new NCG();
-                    if (ncg.NCGGold("0x6AEbea29B88a4b6BB21B877bb6b0E6C6F8C247B8") == null)
+                    Console.WriteLine("TipRedeem is Enabled");
+                    PaymentModel paymentprofile = await db.CheckPaymentQueue();
+                    TipModel profile = await db.LoadTipProfileForBalance(paymentprofile.DiscordUserId.ToString());
+
+                    if (paymentprofile.Id != 0)
                     {
-                        //Bot's Snapshot is down, we can't do any transfers.
-                        Console.WriteLine("Down");
-                    }
-                    else
-                    {
-                        var txid = await ncg.SendNCG(paymentprofile.Key, paymentprofile.Amount);
-                        if (txid == null)
+                        if (ncg.NCGGold("0x6AEbea29B88a4b6BB21B877bb6b0E6C6F8C247B8") == null)
                         {
-                            //Something made the payment fail, maybe the snapsshot is down. Let's keep it here for a re-try.
-                            //This logic can be expanded later to try 3~ times before it puts the transaction "on-hold" until someone reviews it. For now it will keep trying.
-                            await db.DumpPayment("RedeemFail", paymentprofile, paymentprofile, paymentprofile.Amount, txid);
+                            //Bot's Snapshot is down, we can't do any transfers.
+                            Console.WriteLine("Down");
                         }
                         else
                         {
-                            await db.RemoveWithdrawl(paymentprofile);
-                            Console.WriteLine("Payment Succesful");
-                            await comms.RedeemSuccess(client,paymentprofile,txid);
-                            await db.DumpPayment("RedeemSuccesful", paymentprofile, paymentprofile, paymentprofile.Amount, txid);
+                            var txid = await ncg.SendNCG(paymentprofile.Key, paymentprofile.Amount);
+                            Console.WriteLine("Payment to " + paymentprofile.Key + "has been sent LOCALLY");
+                            var sw2 = Stopwatch.StartNew();
+                            for (int ix = 0; ix < 300; ++ix) Thread.Sleep(1000);
+                            sw2.Stop();
+                            //check if TX is on Main Chain
+                            var txverify = ncg.CheckNCG(txid);
+                            Console.WriteLine("Payment to " + paymentprofile.Key + "has been sent CHAIN with id "+txverify);
+                            if (txid == null)
+                            {
+                                //Something made the payment fail, maybe the snapsshot is down. Let's keep it here for a re-try.
+                                //This logic can be expanded later to try 3~ times before it puts the transaction "on-hold" until someone reviews it. For now it will keep trying.
+                                await db.DumpPayment("RedeemFail", paymentprofile, paymentprofile, paymentprofile.Amount, txid);
+                            }
+                            if (txid != null && txverify == null)
+                            {
+                                //Something made the payment fail, maybe the snapsshot is down. Let's keep it here for a re-try.
+                                //This logic can be expanded later to try 3~ times before it puts the transaction "on-hold" until someone reviews it. For now it will keep trying.
+                                await db.DumpPayment("RedeemFail", paymentprofile, paymentprofile, paymentprofile.Amount, txid);
+                                Console.WriteLine("Chain is Outdated");
+                                await db.UpdateTipRedeemStatus(0);
+                                foreach (var process in Process.GetProcessesByName("NineChronicles.Headlesss.Executable.exe"))
+                                {
+                                    process.Kill();
+                                }
+                                System.Diagnostics.Process.Start("C:/Users/carina/AppData/Local/Programs/Nine Chronicles/resources/app/publish/test.bat");
+                                var sw3 = Stopwatch.StartNew();
+                                for (int ix = 0; ix < 30; ++ix) Thread.Sleep(60000);
+                                sw3.Stop();
+                            }
+                            else if (txid != null && txverify != null)
+                            {
+                                await db.RemoveWithdrawl(paymentprofile);
+                                Console.WriteLine("Payment Succesful");
+                                await comms.RedeemSuccess(client, paymentprofile, txid);
+                                await db.DumpPayment("RedeemSuccesful", paymentprofile, paymentprofile, paymentprofile.Amount, txid);
+                            }
+                            else
+                            {
+                                Console.WriteLine("STOP ME RIGHT NOW");
+                                break;
+                            }
                         }
                     }
                 }
+                else
+                {
+                    Console.WriteLine("TipRedeem is Disabled");
+                }
             }
         }
+
+        public static async Task<bool> ChainReady(NCG ncg, SqliteDataAccess db)
+        {
+            var ready = ncg.ChainReady();
+            //prep
+            if (ready.Result.ToString() == "True")
+            {
+                await db.UpdateTipRedeemStatus(1);
+                Console.WriteLine("Chain Ready");
+                return true;
+            }
+            else
+            {
+                await db.UpdateTipRedeemStatus(0);
+                Console.WriteLine("Chain NOT Ready");
+                return false;
+            }
+        }
+       
     }
 }

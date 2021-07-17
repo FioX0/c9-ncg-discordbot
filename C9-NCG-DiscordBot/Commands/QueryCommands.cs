@@ -34,10 +34,16 @@ namespace C9_NCG_DiscordBot.Commands
             await ctx.Channel.SendMessageAsync("I'm here").ConfigureAwait(false);
         }
 
+        [Command("marketreport")]
+        [Description("Way to check if the bot is alive")]
+        public async Task Report(CommandContext ctx)
+        {
+            await extras.OnDemandShopDataAsync(ctx);
+        }
 
         [Command("setprofile")]
         [Description("Set your public key against your discord profile, will allow you to query ncg without having to use the public key all the time.")]
-        public async Task SetProfileKey(CommandContext ctx, [Description("This is what you want to call your profile")] string alias, [Description("This is your PUBLIC Address")] string publickey)
+        public async Task SetProfileKey(CommandContext ctx, [Description("This is what you want to call your profile")] string alias= "null", [Description("This is your PUBLIC Address")] string publickey = "null")
         {
             Console.WriteLine("SetProfileReceived");
             ulong userid = ctx.Member.Id;
@@ -47,22 +53,32 @@ namespace C9_NCG_DiscordBot.Commands
             var setup = new Setup();
             var oldmessage = ctx.Message;
 
-            bool state = setup.SetProfileNew(publickey,alias, userid);
-            await ctx.Message.CreateReactionAsync(eyes).ConfigureAwait(false);
-            if (state)
+            if (publickey == "null" || !publickey.Contains("0x") || alias == "null")
             {
-                await comms.SetProfile(ctx, oldmessage, username, alias, publickey);
+                //provide valid key.
+                await ctx.Message.DeleteAsync("Invalid Alias provided, might be private key, deleting for security");
+                await comms.CustomMessage(ctx, oldmessage,"Invalid SetProfile Request", "The data provided isn't quite right.\n\nI have deleted your message in case you provided a private key by accident.");
             }
             else
             {
-                var ncg = new NCG();
-                if (ncg.NCGGold("0xa49d64c31A2594e8Fb452238C9a03beFD1119963") == null)
+
+                bool state = setup.SetProfileNew(publickey, alias, userid);
+                await ctx.Message.CreateReactionAsync(eyes).ConfigureAwait(false);
+                if (state)
                 {
-                    await comms.SnapshotDown(ctx, oldmessage);
+                    await comms.SetProfile(ctx, oldmessage, username, alias, publickey);
                 }
                 else
                 {
-                    await comms.GenericError(ctx, oldmessage, username);
+                    var ncg = new NCG();
+                    if (ncg.NCGGold("0xa49d64c31A2594e8Fb452238C9a03beFD1119963") == null)
+                    {
+                        await comms.SnapshotDown(ctx, oldmessage);
+                    }
+                    else
+                    {
+                        await comms.ProfileFailed(ctx, oldmessage, username);
+                    }
                 }
             }
         }
@@ -71,26 +87,31 @@ namespace C9_NCG_DiscordBot.Commands
         [Description("Allows you to request your NCG Balance using your PUBLIC Address")]
         public async Task Gold(CommandContext ctx, [Description("This is your PUBLIC Address")] string publickey = "")
         {
-            //Debug
+            var comms = new Communication();
             var username = ctx.Member.Username;
             var eyes = DiscordEmoji.FromName(ctx.Client, ":eyes:");
             await ctx.Message.CreateReactionAsync(eyes).ConfigureAwait(false);
-            var oldmessage = ctx.Message;
-            Console.WriteLine("User: " + username + " requested NCG value against key: " + publickey);
-            //debug end
             var ncg = new NCG();
-            string result = ncg.NCGGold(publickey);
-            Console.WriteLine(result);
-            var comms = new Communication();
-            if (result == null)
+            var oldmessage = ctx.Message;
+
+            if (publickey != "")
             {
-                if (ncg.NCGGold("0xa49d64c31A2594e8Fb452238C9a03beFD1119963") == null)
-                    await comms.SnapshotDown(ctx, oldmessage);
+                //debug
+                Console.WriteLine("User: " + username + " requested NCG value against key: " + publickey);
+                //debug end
+
+                string result = ncg.NCGGold(publickey);
+                Console.WriteLine(result);
+
+                if (result == null)
+                {
+                    if (ncg.NCGGold("0xa49d64c31A2594e8Fb452238C9a03beFD1119963") == null)
+                        await comms.SnapshotDown(ctx, oldmessage);
+                }
                 else
-                    await comms.GenericError(ctx, oldmessage, username);
+                    await comms.NormalNCG(ctx, oldmessage, username, result);
             }
-            else
-                await comms.NormalNCG(ctx, oldmessage, username, result);
+            await comms.CustomMessage(ctx, oldmessage, "Invalid Request", "**" + username + "**\nThe respective request is invalid.\nCorrect usage would be +ncg 'publickey here'");
         }
 
         [Command("ncgprofile")]
@@ -114,7 +135,7 @@ namespace C9_NCG_DiscordBot.Commands
                 ProfileModel[] array = await sqli.LoadProfileALL(ctx.User.Id, alias);
                 int count = array.Length;
                 if (count == 0)
-                    await comms.GenericError(ctx, oldmessage, username);
+                    await comms.ProfileFailed(ctx, oldmessage, username);
                 int y=1;
                 List<DiscordMessage> messagesall = new List<DiscordMessage>();
 
@@ -132,7 +153,7 @@ namespace C9_NCG_DiscordBot.Commands
                         }
                         else
                         {
-                            await comms.GenericError(ctx, oldmessage, username);
+                            await comms.ProfileFailed(ctx, oldmessage, username);
                         }
                     }
                     else
@@ -163,7 +184,7 @@ namespace C9_NCG_DiscordBot.Commands
                     }
                     else
                     {
-                        await comms.GenericError(ctx, oldmessage, username);
+                        await comms.ProfileFailed(ctx, oldmessage, username);
                     }
                 }
                 else
@@ -179,7 +200,6 @@ namespace C9_NCG_DiscordBot.Commands
                 }
             }
         }
-
 
         //fix this shit
         [Command("ncgbeforehash")]

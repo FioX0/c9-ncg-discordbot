@@ -23,10 +23,11 @@ namespace C9_NCG_DiscordBot.blockchain
             }
             else
             {
-                //New Profile
-                
+                //New Profile        
                 return SqliteDataAccess.SaveProfile(profile);
             }
         }
+
+
     }
 }
