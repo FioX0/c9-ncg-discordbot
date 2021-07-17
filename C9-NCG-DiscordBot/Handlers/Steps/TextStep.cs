@@ -78,7 +78,7 @@ namespace C9_NCG_DiscordBot.Handlers.Steps
                 {
                     if(messageResult.Message.Content.Length < _minLength.Value)
                     {                     
-                            await TryAgain(channel, $"Your Input is not valid, please use **+back** to go to the main menu or **+cancel** to exit the help menu. L").ConfigureAwait(false);
+                            await TryAgain(channel, $"Your Input is not valid, please check the information in **BOLD**\n\n or use **+back** to go to the main menu or **+cancel** to exit the help menu. L").ConfigureAwait(false);
                             continue;
                     }
                 }
@@ -92,7 +92,7 @@ namespace C9_NCG_DiscordBot.Handlers.Steps
                             continue;
                         else
                         {
-                            await TryAgain(channel, $"Your Input is not valid, please use **+back** to go to the main menu or **+cancel** to exit the help menu. H").ConfigureAwait(false);
+                            await TryAgain(channel, $"Your Input is not valid, please check the information in **BOLD**\n\n or use **+back** to go to the main menu or **+cancel** to exit the help menu. H").ConfigureAwait(false);
                             continue;
                         }
                     }

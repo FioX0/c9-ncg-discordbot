@@ -63,7 +63,7 @@ namespace C9_NCG_DiscordBot
             Commands.RegisterCommands<ReportCommands>();
 
             await Client.ConnectAsync();
-            Console.WriteLine("Running NCGBot V1.0.6");
+            Console.WriteLine("Running NCGBot V1.0.7");
 
             Tips.PaymentProcessor(Client);
             extras.DailyBlockReport(Client);

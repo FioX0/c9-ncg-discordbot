@@ -111,7 +111,7 @@ namespace C9_NCG_DiscordBot.Commands
                 else
                     await comms.NormalNCG(ctx, oldmessage, username, result);
             }
-            await comms.CustomMessage(ctx, oldmessage, "Invalid Request", "**" + username + "**\nThe respective request is invalid.\nCorrect usage would be +ncg 'publickey here'");
+            await comms.CustomMessage(ctx, oldmessage, "Invalid Request", "**" + username + "**\nThe respective request is invalid.\nCorrect usage would be +ncg 'publickey here'\n\nUse +helpme if you need further assistance.");
         }
 
         [Command("ncgprofile")]

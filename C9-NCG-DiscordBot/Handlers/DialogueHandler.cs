@@ -57,7 +57,12 @@ namespace C9_NCG_DiscordBot.Handlers
 
             foreach(var message in messages)
             {
-                await message.DeleteAsync().ConfigureAwait(false);
+                try
+                {
+                    await message.DeleteAsync().ConfigureAwait(false);
+                }
+                catch { //message no longer exists
+                        }
             }
             messages.Clear();
         }
