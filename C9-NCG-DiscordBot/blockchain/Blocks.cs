@@ -1,4 +1,5 @@
 ﻿using C9_NCG_DiscordBot.Models;
+using DSharpPlus.CommandsNext;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using RestSharp;
@@ -6,12 +7,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace C9_NCG_DiscordBot.blockchain
 {
     public class Blocks
     {
+        private static string MainObject;
         public int BlockReportYesterday(string key)
         {
             string todayDate = DateTime.Now.ToString("MM/dd/yyyy");
@@ -662,6 +665,241 @@ namespace C9_NCG_DiscordBot.blockchain
                 }
             }
             return null;
+        }
+
+
+        public static IRestResponse GetExploiterData(string address)
+        {
+                var client = new RestClient("http://localhost:23061/graphql");
+                client.Timeout = -1;
+                var request = new RestRequest(Method.POST);
+                request.AddHeader("Content-Type", "application/json");
+                request.AddParameter("application/json", "{\"query\":\"query{\\r\\nchainQuery{\\r\\n  transactionQuery{\\r\\n    transactions(signer:\\\""+address+"\\\",desc: true, offset: 0, limit: 20000){\\r\\n      signer,publicKey,updatedAddresses,actions{inspection},timestamp\\r\\n    }\\r\\n  }\\r\\n}}\",\"variables\":{}}",
+                           ParameterType.RequestBody);
+                IRestResponse response = client.Execute(request);
+
+            return response;
+        }
+
+        public static async Task<bool> ExploitReport(string address, CommandContext ctx )
+        {
+            int amount = 0;
+            int y = 0;
+            bool required = true;
+
+            try
+            {
+                Console.WriteLine("Calling API");
+
+                Console.WriteLine("Getting data");
+                //We got response, now let's parse it.
+                var response = GetExploiterData(address);
+
+                if (response == null)
+                {
+                    return false;
+                }
+
+                List<JObject> blocklist = new List<JObject>();
+                List<string> ignorereceiver = new List<string>();
+
+                try
+                {
+                    JObject joResponse = JObject.Parse(response.Content);
+
+                    var resultObjects = AllChildren(JObject.Parse(response.Content))
+                    .First(c => c.Type == JTokenType.Array && c.Path.Contains("transactions"))
+                    .Children<JObject>();
+
+                    foreach (JObject blocklines in resultObjects)
+                    {
+                        blocklist.Add(blocklines);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex);
+                    await ctx.Client.SendMessageAsync(ctx.Channel, "I timed out, this was likely due to no TX's being sent from this address.");
+                }
+
+                // JArray jAddresses = (JArray)ojObject["chainQuery"]["blockQuery"]["blocks"];
+                //Console.WriteLine(jAddresses);
+
+                while (y!=20)
+                {
+                    foreach (JObject miner in blocklist)
+                    {
+                        if (MainObject == null)
+                        {
+                            Console.WriteLine("MainObject is empty");
+                            var transfercheck = miner.ToString().Contains("transfer_asset");
+                            if (transfercheck)
+                            {
+                                JArray minerJValue = (JArray)miner["updatedAddresses"];
+                                JValue signer = (JValue)miner["signer"];
+                                Console.WriteLine(signer.ToString());
+
+                                if(signer.ToString() == minerJValue[0].ToString())
+                                {
+                                    if (!ignorereceiver.Contains(minerJValue[1].ToString()))
+                                    {
+                                        MainObject = minerJValue[1].ToString();
+                                    }
+                                    else
+                                    {
+                                        Console.WriteLine("This Address already in ignore list");
+                                    }
+                                }
+                                else
+                                {
+                                    if (!ignorereceiver.Contains(minerJValue[0].ToString()))
+                                    {
+                                        MainObject = minerJValue[0].ToString();
+                                    }
+                                    else
+                                    {
+                                        Console.WriteLine("This Address already in ignore list");
+                                    }
+                                }
+
+
+                            }
+                        }
+                        else
+                        {
+                            //let's find for miners inside that match MainObject;
+                            // minerJValue[0] receiver, minerJValue[1] sender.
+                    
+                            var transfercheck = miner.ToString().Contains("transfer_asset");
+                            //it wasn't a transfer
+                            if (!transfercheck)
+                            {
+                                Console.WriteLine("Not Transfer.");
+                            }
+                            else
+                            {
+                                JArray receiver = (JArray)miner["updatedAddresses"];
+                                JValue signer = (JValue)miner["signer"];
+
+                                if (signer.ToString() == receiver[0].ToString())
+                                {
+                                    if (receiver[1].ToString() != MainObject)
+                                    {
+                                        Console.WriteLine("Not Same Receiver.");
+                                    }
+                                    else
+                                    {
+                                        JArray action = (JArray)miner["actions"];
+                                        //Console.WriteLine(action.ToString());
+                                        string actionstring = action.ToString();
+                                        int firstStringPosition = actionstring.IndexOf("NCG");
+                                        int secondStringPosition = actionstring.IndexOf("recipient");
+                                        string stringBetweenTwoStrings = actionstring.Substring(firstStringPosition + 3,
+                                            secondStringPosition - firstStringPosition - 3);
+                                        //Console.WriteLine(stringBetweenTwoStrings);
+                                        string resultString = Regex.Match(stringBetweenTwoStrings, @"\d+").Value;
+                                        int valuetoadd = int.Parse(resultString);
+                                        amount += valuetoadd;
+                                    }
+                                }
+                                else
+                                {
+                                    if (receiver[0].ToString() != MainObject)
+                                    {
+                                        Console.WriteLine("Not Same Receiver.");
+                                    }
+                                    else
+                                    {
+                                        JArray action = (JArray)miner["actions"];
+                                        //Console.WriteLine(action.ToString());
+                                        string actionstring = action.ToString();
+                                        int firstStringPosition = actionstring.IndexOf("NCG");
+                                        int secondStringPosition = actionstring.IndexOf("recipient");
+                                        string stringBetweenTwoStrings = actionstring.Substring(firstStringPosition + 3,
+                                            secondStringPosition - firstStringPosition - 3);
+                                        //Console.WriteLine(stringBetweenTwoStrings);
+                                        string resultString = Regex.Match(stringBetweenTwoStrings, @"\d+").Value;
+                                        int valuetoadd = int.Parse(resultString);
+                                        amount += valuetoadd;
+                                    }
+                                }
+                            }   
+                        }
+                    }
+
+                    if (amount > 0)
+                    {
+                        amount += 1;
+                        await ctx.Client.SendMessageAsync(ctx.Channel, address + " -> " + MainObject + " the following amount of NCG " + amount);
+                    }
+                    if (amount == 0)
+                        y++;
+                    amount = 0;
+                    ignorereceiver.Add(MainObject);
+                    MainObject = string.Empty;
+                }
+                Console.WriteLine("stopped");
+                ignorereceiver.Clear();
+                blocklist.Clear();
+                GC.Collect();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+                await ctx.Client.SendMessageAsync(ctx.Channel,"I timed out, this was likely due to no TX's being sent from this address.");
+            }
+            return false;
+        }
+
+        public static int Checklevel(string address)
+        {
+            int pass = 0;
+            var client = new RestClient("https://9c-main-full-state.planetarium.dev/graphql");
+            client.Timeout = -1;
+            var request = new RestRequest(Method.POST);
+            request.AddHeader("Content-Type", "application/json");
+            request.AddParameter("application/json", "{\"query\":\"query {\\r\\n  stateQuery{\\r\\n    agent(address: \\\""+address+"\\\")\\r\\n        {avatarStates{level}\\r\\n    \\r\\n    }\\r\\n  }\\r\\n}\\r\\n   \",\"variables\":{}}",
+                       ParameterType.RequestBody);
+            IRestResponse response = client.Execute(request);
+
+            JObject joResponse = JObject.Parse(response.Content);
+
+            var resultObjects = AllChildren(JObject.Parse(response.Content))
+            .First(c => c.Type == JTokenType.Array && c.Path.Contains("data"))
+            .Children<JObject>();
+
+            foreach (JObject entry in resultObjects)
+            {
+                JValue level = (JValue)entry["level"];
+                Console.WriteLine(level.ToString());
+                int levelvalue = int.Parse(level.ToString());
+                if (levelvalue >= 150)
+                    pass = 1;
+            }
+
+            return pass;
+        }
+
+        public static int CheckMonster(string address)
+        {
+            int pass = 0;
+            var client = new RestClient("https://9c-main-full-state.planetarium.dev/graphql");
+            client.Timeout = -1;
+            var request = new RestRequest(Method.POST);
+            request.AddHeader("Content-Type", "application/json");
+            request.AddParameter("application/json", "{\"query\":\"query{\\r\\n  stateQuery{\\r\\n    monsterCollectionState(agentAddress:\\\""+address+"\\\"){\\r\\n    \\tlevel\\r\\n    }\\r\\n  }\\r\\n}\",\"variables\":{}}",
+                       ParameterType.RequestBody);
+            IRestResponse response = client.Execute(request);
+
+            JObject joResponse = JObject.Parse(response.Content);
+
+                JValue level = (JValue)joResponse["data"]["stateQuery"]["monsterCollectionState"]["level"];
+                Console.WriteLine(level.ToString());
+                int levelvalue = int.Parse(level.ToString());
+                if (levelvalue >= 3)
+                    pass = 1;
+
+            return pass;
         }
     }
 }

@@ -4,18 +4,22 @@ using DSharpPlus;
 using DSharpPlus.CommandsNext;
 using DSharpPlus.EventArgs;
 using DSharpPlus.Interactivity;
+using DSharpPlus.Entities;
 using Newtonsoft.Json;
 using System;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
+using System.Threading;
+using Microsoft.Extensions.Logging;
+using DSharpPlus.Interactivity.Extensions;
 
 namespace C9_NCG_DiscordBot
 {
     public class Bot
     {
         public DiscordClient Client { get; private set; }
-        public CommandsNextModule Commands { get; private set; }
+        public CommandsNextExtension Commands { get; private set; }
 
         public async Task RunAsync()
         {
@@ -31,13 +35,12 @@ namespace C9_NCG_DiscordBot
                 Token = configJson.Token,
                 TokenType = TokenType.Bot,
                 AutoReconnect = true,
-                LogLevel = LogLevel.Info,
-                UseInternalLogHandler = true
+                MinimumLogLevel = LogLevel.Information,
             };
 
             Client = new DiscordClient(config);
 
-            Client.Ready += OnClientReady;
+            this.Client.Ready += this.OnClientReady;
 
             Client.UseInteractivity(new InteractivityConfiguration
             {
@@ -47,7 +50,7 @@ namespace C9_NCG_DiscordBot
 
             var commandsConfig = new CommandsNextConfiguration
             {
-                StringPrefix = new string(configJson.Prefix),
+                StringPrefixes = new[] {configJson.Prefix},
                 EnableDms = true,
                 EnableMentionPrefix = false,
                 IgnoreExtraArguments = false,
@@ -57,24 +60,33 @@ namespace C9_NCG_DiscordBot
 
             Commands = Client.UseCommandsNext(commandsConfig);
 
-            Commands.RegisterCommands<QueryCommands>();
-            Commands.RegisterCommands<TipCommands>();
-            Commands.RegisterCommands<HelpMe>();
-            Commands.RegisterCommands<ReportCommands>();
+            this.Commands.RegisterCommands<QueryCommands>();
+            this.Commands.RegisterCommands<TipCommands>();
+            //this.Commands.RegisterCommands<HelpMe>();
+            this.Commands.RegisterCommands<ReportCommands>();
 
-            await Client.ConnectAsync();
-            Console.WriteLine("Running NCGBot V1.0.7");
+            DSharpPlus.Entities.DiscordActivity activity = new DSharpPlus.Entities.DiscordActivity();
+            activity.Name = "Loading";
 
-            Tips.PaymentProcessor(Client);
-            extras.DailyBlockReport(Client);
-            extras.ShopDataAsync(Client);
-            //extras.Alarm(Client);
+            await Client.ConnectAsync(activity);
+
+            Console.WriteLine("Running NCGBot V1.0.7.2");
+
+            new Thread(() =>{extras.BackupDBAsync();}).Start();
+            //new Thread(() => {Tips.PaymentProcessor(Client);}).Start();
+            //extras.RunChain();
+            //new Thread(() => { extras.DailyBlockReport(Client); }).Start();
+            new Thread(() => { extras.Miningwhitelist(Client); }).Start();
+            new Thread(() => { extras.UpdateStatusAsync(Client); }).Start();
+
+            //extras.ShopDataAsync(Client);
 
             await Task.Delay(-1);
         }
 
-        private Task OnClientReady(ReadyEventArgs e)
+        private Task OnClientReady(DiscordClient sender, ReadyEventArgs e)
         {
+            Console.WriteLine("Client Ready");
             return Task.CompletedTask;
         }
     }

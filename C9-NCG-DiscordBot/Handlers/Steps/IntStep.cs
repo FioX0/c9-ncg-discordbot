@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using DSharpPlus.Interactivity;
 using System.Text;
 using System.Threading.Tasks;
+using DSharpPlus.Interactivity.Extensions;
 
 namespace C9_NCG_DiscordBot.Handlers.Steps
 {
@@ -43,7 +44,7 @@ namespace C9_NCG_DiscordBot.Handlers.Steps
                 Title = $"Help System",
                 Description = $"{user.Mention}, {_content}",
                 Color = DiscordColor.Blue,
-                ThumbnailUrl = client.CurrentUser.AvatarUrl
+                ImageUrl = client.CurrentUser.AvatarUrl
             };
             embedBuilder.AddField("To Stop the Dialogue", "Use the +cancel command");
 
@@ -57,7 +58,7 @@ namespace C9_NCG_DiscordBot.Handlers.Steps
             //    embedBuilder.AddField("Max Value:", $"{_maxValue.Value} characters");
             //}
 
-            var interactivity = client.GetInteractivityModule();
+            var interactivity = client.GetInteractivity();
 
             while(true)
             {
@@ -67,7 +68,7 @@ namespace C9_NCG_DiscordBot.Handlers.Steps
 
                 var messageResult = await interactivity.WaitForMessageAsync(x => x.ChannelId == channel.Id && x.Author.Id == user.Id).ConfigureAwait(false);
 
-                OnMessageAdded(messageResult.Message);
+                OnMessageAdded(messageResult.Result.);
 
                 if(messageResult.Message.Content.Equals("+cancel", StringComparison.OrdinalIgnoreCase))
                 {
@@ -80,16 +81,7 @@ namespace C9_NCG_DiscordBot.Handlers.Steps
                         continue;
                     else
                     {
-                        await TryAgain(channel, $"Your input is not a valid input").ConfigureAwait(false);
-                        continue;
-                    }
-                }
-
-                if(_minValue.HasValue)
-                {
-                    if(inputValue < _minValue.Value)
-                    {
-                        await TryAgain(channel, $"Your Input value {inputValue} is smaller than {_minValue.Value}").ConfigureAwait(false);
+                        await TryAgain(channel, $"Your input is not a valid input. Please check the information in **BOLD**").ConfigureAwait(false);
                         continue;
                     }
                 }

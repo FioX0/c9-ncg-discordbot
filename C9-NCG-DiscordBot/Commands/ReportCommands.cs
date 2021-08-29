@@ -5,6 +5,7 @@ using CsvHelper;
 using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
 using DSharpPlus.Entities;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -14,7 +15,7 @@ using System.Threading.Tasks;
 
 namespace C9_NCG_DiscordBot.Commands
 {
-    class ReportCommands
+    class ReportCommands : BaseCommandModule
     {
         [Command("mined-yd")]
         [Description("Allows you to request your NCG Balance using your previous saved publickey")]
@@ -259,10 +260,10 @@ namespace C9_NCG_DiscordBot.Commands
             }
         }
 
-        [Command("fullblockreport")]
-        [Description("Allows you to request your NCG Balance using your previous saved publickey")]
-        [Cooldown(1, 120, CooldownBucketType.Global)]
-        public async Task BlockFullReport(CommandContext ctx)
+
+        [Command("exploitreport")]
+        //[Cooldown(1, 60, CooldownBucketType.Global)]
+        public async Task exploitreport(CommandContext ctx, string address = null)
         {
             var username = ctx.Member.DisplayName;
             var userid = ctx.Member.Id;
@@ -270,89 +271,16 @@ namespace C9_NCG_DiscordBot.Commands
             await ctx.Message.CreateReactionAsync(eyes).ConfigureAwait(false);
             var oldmessage = ctx.Message;
 
-            SqliteDataAccess sqli = new SqliteDataAccess();
-            var blocks = new Blocks();
-            var ncg = new NCG();
-            var comms = new Communication();
-            await comms.Warning(ctx, oldmessage, username, 10);
-            await SqliteDataAccess.Deleteblockreport();
-            var result = await blocks.DayReportFullBlock();
-            if (!result)
+            if(address == null)
             {
-                //snapshot down?
-                if (ncg.NCGGold("0xa49d64c31A2594e8Fb452238C9a03beFD1119963") == null)
-                {
-                    //fuck snapshot is down.
-                    await comms.SnapshotDown(ctx, oldmessage);
-                }
-                else
-                {
-                    await comms.ProfileFailed(ctx, oldmessage, username);
-                }
+
             }
             else
             {
-                BlockReportModel[] dataSet = await SqliteDataAccess.GetBlockReportData();
-                using (var writer = new StreamWriter("C:/Release/Report/Blocks.csv"))
-                using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
-                {
-                    csv.WriteRecords(dataSet);
-                }
-                await ctx.Channel.SendFileAsync("C:/Release/Report/Blocks.csv", "Here's your Report");
-                var done = DiscordEmoji.FromName(ctx.Client, ":white_check_mark:");
-                await oldmessage.DeleteAllReactionsAsync("Done").ConfigureAwait(false);
-                await oldmessage.CreateReactionAsync(done).ConfigureAwait(false);
+               var result = await Blocks.ExploitReport(address, ctx);
+
             }
-        }
-
-        [Command("blockreport")]
-        [Description("Allows you to request your NCG Balance using your previous saved publickey")]
-        [Cooldown(1, 60, CooldownBucketType.Global)]
-        public async Task CustomBlockReport(CommandContext ctx, int howfar = 0)
-        {
-            var username = ctx.Member.DisplayName;
-            var userid = ctx.Member.Id;
-            var eyes = DiscordEmoji.FromName(ctx.Client, ":eyes:");
-            await ctx.Message.CreateReactionAsync(eyes).ConfigureAwait(false);
-            var oldmessage = ctx.Message;
-
-            if (howfar > 0)
-            {
-
-                SqliteDataAccess sqli = new SqliteDataAccess();
-                var blocks = new Blocks();
-                var ncg = new NCG();
-                var comms = new Communication();
-                await SqliteDataAccess.Deleteblockreport();
-                var result = await blocks.CustomDayReport(howfar);
-                if (!result)
-                {
-                    //snapshot down?
-                    if (ncg.NCGGold("0xa49d64c31A2594e8Fb452238C9a03beFD1119963") == null)
-                    {
-                        //fuck snapshot is down.
-                        await comms.SnapshotDown(ctx, oldmessage);
-                    }
-                    else
-                    {
-                        await comms.ProfileFailed(ctx, oldmessage, username);
-                    }
-                }
-                else
-                {
-                    BlockReportModel[] dataSet = await SqliteDataAccess.GetBlockReportData();
-                    using (var writer = new StreamWriter("C:/Release/Report/Blocks.csv"))
-                    using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
-                    {
-                        csv.WriteRecords(dataSet);
-                    }
-                    await ctx.Channel.SendFileAsync("C:/Release/Report/Blocks.csv", "Here's your Report");
-
-                    var done = DiscordEmoji.FromName(ctx.Client, ":white_check_mark:");
-                    await oldmessage.DeleteAllReactionsAsync("Done").ConfigureAwait(false);
-                    await oldmessage.CreateReactionAsync(done).ConfigureAwait(false);
-                }
-            }
+            
         }
     }
 }

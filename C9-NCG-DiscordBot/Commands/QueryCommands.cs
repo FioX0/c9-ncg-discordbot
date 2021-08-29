@@ -1,30 +1,16 @@
 ﻿using System;
 using DSharpPlus.CommandsNext;
 using System.Collections.Generic;
-using System.Text;
-using DSharpPlus;
 using System.Threading.Tasks;
 using DSharpPlus.CommandsNext.Attributes;
 using DSharpPlus.Entities;
 using C9_NCG_DiscordBot.blockchain;
-using System.IO;
-using C9_NCG_DiscordBot.TipSystem;
 using C9_NCG_DiscordBot.Models;
-using DSharpPlus.Interactivity;
 using C9_NCG_DiscordBot.Handlers;
-using RestSharp;
-using System.Data;
-using Newtonsoft.Json;
-using System.Linq;
-using System.Xml;
-using ServiceStack;
-using ServiceStack.Text;
-using Newtonsoft.Json.Linq;
-using ChoETL;
 
 namespace C9_NCG_DiscordBot.Commands
 {
-    public class QueryCommands
+    public class QueryCommands : BaseCommandModule
     {
 
         [Command("ping")]
@@ -32,13 +18,6 @@ namespace C9_NCG_DiscordBot.Commands
         public async Task Ping(CommandContext ctx)
         {
             await ctx.Channel.SendMessageAsync("I'm here").ConfigureAwait(false);
-        }
-
-        [Command("marketreport")]
-        [Description("Way to check if the bot is alive")]
-        public async Task Report(CommandContext ctx)
-        {
-            await extras.OnDemandShopDataAsync(ctx);
         }
 
         [Command("setprofile")]
@@ -110,8 +89,8 @@ namespace C9_NCG_DiscordBot.Commands
                 }
                 else
                     await comms.NormalNCG(ctx, oldmessage, username, result);
-            }
-            await comms.CustomMessage(ctx, oldmessage, "Invalid Request", "**" + username + "**\nThe respective request is invalid.\nCorrect usage would be +ncg 'publickey here'\n\nUse +helpme if you need further assistance.");
+            }else
+            await comms.CustomMessage(ctx, oldmessage, "Invalid Request", "**" + username + "**\nThe respective request is invalid.\nCorrect usage would be +ncg \"publickey here\"\n\nUse +helpme if you need further assistance.");
         }
 
         [Command("ncgprofile")]

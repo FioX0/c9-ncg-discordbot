@@ -13,13 +13,13 @@ using C9_NCG_DiscordBot.Models;
 using DSharpPlus.Interactivity;
 using C9_NCG_DiscordBot.Handlers;
 using static C9_NCG_DiscordBot.Enums.TipEnums;
-using C9_NCG_DiscordBot.Handlers.Steps;
+//using C9_NCG_DiscordBot.Handlers.Steps;
 using System.Diagnostics;
 using System.Threading;
 
 namespace C9_NCG_DiscordBot.Commands
 {
-    public class TipCommands
+    public class TipCommands : BaseCommandModule
     {
         [Command("tipadmin")]
         [Description("Set user as admin on tipping system")]
@@ -273,7 +273,7 @@ namespace C9_NCG_DiscordBot.Commands
             else
             {
                 Console.WriteLine("Valid TopUp Request");
-                comms.TopTupStarded(ctx, oldmessage, username);
+                await comms.TopTupStarded(ctx, oldmessage, username);
                 await ctx.Message.CreateReactionAsync(eyes).ConfigureAwait(false);
                 profile = await Tips.ProfileExistsNew(ctx.Member.Id);
                 if (profile.Id > 0)

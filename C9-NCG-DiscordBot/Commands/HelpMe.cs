@@ -7,7 +7,7 @@ using System;
 
 namespace C9_NCG_DiscordBot.Commands
 {
-    public class HelpMe
+    public class HelpMe : BaseCommandModule
     {
 
         [Command("helpme")]
