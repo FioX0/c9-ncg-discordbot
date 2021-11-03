@@ -2,9 +2,18 @@
 using C9_NCG_DiscordBot.Handlers;
 using C9_NCG_DiscordBot.Models;
 using CsvHelper;
+using Dropbox.Api;
+using Dropbox.Api.Files;
 using DSharpPlus;
 using DSharpPlus.CommandsNext;
 using DSharpPlus.Entities;
+using DSharpPlus.EventArgs;
+using Google.Apis.Auth.OAuth2;
+using Google.Apis.Auth.OAuth2.Flows;
+using Google.Apis.Auth.OAuth2.Responses;
+using Google.Apis.Drive.v3;
+using Google.Apis.Services;
+using Google.Apis.Util.Store;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using RestSharp;
@@ -15,130 +24,23 @@ using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using static C9_NCG_DiscordBot.Enums.TipEnums;
+using static Google.Apis.Drive.v3.DriveService;
 
 namespace C9_NCG_DiscordBot
 {
+
     class extras
     {
-        public static async Task ShopDataAsync(DiscordClient client2)
+
+        public static List<ulong> ReadMessages = new List<ulong>();
+        public sealed class DiscordActivity
         {
-            int isittime = 0;
-            while (true)
-            {
-                var sw1 = Stopwatch.StartNew();
-                for (int ix = 0; ix < 60; ++ix) Thread.Sleep(1000);
-                sw1.Stop();
-                //Console.WriteLine("Sleep: {0}", sw1.ElapsedMilliseconds);
-                
-                string time = DateTime.UtcNow.ToString("HH");
-
-                //Console.WriteLine(time);
-
-                if (time == "13" && isittime == 0)
-                {
-                    await GetMeMyShit("WEAPON");
-                    await GetMeMyShit("ARMOR");
-                    await GetMeMyShit("BELT");
-                    await GetMeMyShit("NECKLACE");
-                    await GetMeMyShit("RING");
-                    await GetMeMyShit("FOOD");
-                    await GetMeMyShit("TITLE");
-                    await GetMeMyShit("FULL_COSTUME");
-
-                    string startPath = @"F:\Report\reportplace\";
-                    string zipPath = @"F:\Report\result.zip";
-
-                    if(File.Exists(zipPath))
-                    {
-                        File.Delete(zipPath);
-                    }
-
-                    ZipFile.CreateFromDirectory(startPath, zipPath);
-
-                    DiscordChannel channel = await client2.GetChannelAsync(331443974722027522);
-                    await channel.SendFileAsync("C:/Report/result.zip", "Here's your Report");
-
-
-                    isittime = 1;
-                }
-
-                if (time != "13" && isittime == 1)
-                    isittime = 0;
-            }
-        }
-
-        public static async Task OnDemandShopDataAsync(CommandContext ctx)
-        {
-            await GetMeMyShit("WEAPON");
-            await GetMeMyShit("ARMOR");
-            await GetMeMyShit("BELT");
-            await GetMeMyShit("NECKLACE");
-            await GetMeMyShit("RING");
-            await GetMeMyShit("FOOD");
-            await GetMeMyShit("TITLE");
-            await GetMeMyShit("FULL_COSTUME");
-
-            string startPath = @"C:\Report\reportplace\";
-            string zipPath = @"C:\Report\result.zip";
-
-            if (File.Exists(zipPath))
-            {
-                File.Delete(zipPath);
-            }
-
-            ZipFile.CreateFromDirectory(startPath, zipPath);
-
-            await ctx.Channel.SendFileAsync("C:/Report/result.zip", "Here's your Report");
-        }
-
-        public static async Task DailyBlockReport(DiscordClient client2)
-        {
-            Console.WriteLine("DailyBlockEnabled");
-            int howfar = 8640;
-            int isittime = 0;
-            while (true)
-            {
-                var sw1 = Stopwatch.StartNew();
-                for (int ix = 0; ix < 60; ++ix) Thread.Sleep(1000);
-                sw1.Stop();
-                //Console.WriteLine("Sleep: {0}", sw1.ElapsedMilliseconds);
-                string time = DateTime.Now.ToString("HH");
-
-                //Console.WriteLine(time);
-
-                if (time == "00" && isittime == 0)
-                {
-                    if (howfar > 0)
-                    {
-
-                        SqliteDataAccess sqli = new SqliteDataAccess();
-                        var blocks = new Blocks();
-                        var ncg = new NCG();
-                        var comms = new Communication();
-                        await SqliteDataAccess.Deleteblockreport();
-                        var result = await blocks.CustomDayReport(howfar);
-
-                            BlockReportModel[] dataSet = await SqliteDataAccess.GetBlockReportData();
-                            using (var writer = new StreamWriter("C:/Release/Report/FullDayBlocks.csv"))
-                            using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
-                            {
-                                csv.WriteRecords(dataSet);
-                            }
-                        DiscordChannel channel = await client2.GetChannelAsync(856196469727035432);
-                        DiscordChannel channel2 = await client2.GetChannelAsync(826783795842777102);
-                        await channel.SendFileAsync("C:/Release/Report/FullDayBlocks.csv", "Daily Reset Full Block Report");
-                        await channel2.SendFileAsync("C:/Release/Report/FullDayBlocks.csv", "Daily Reset Full Block Report");
-                    }
-                    isittime = 1;
-                }
-
-                if (time != "00" && isittime == 1)
-                    isittime = 0;
-            }
+            public string Name { get; internal set; }
         }
 
         public static async Task<bool> GetMeMyShit(string content)
@@ -147,7 +49,7 @@ namespace C9_NCG_DiscordBot
             client.Timeout = -1;
             var request = new RestRequest(Method.POST);
             request.AddHeader("Content-Type", "application/json");
-            request.AddParameter("application/json", "{\"query\":\"query {\\r\\n  stateQuery {\\r\\n    shop {\\r\\n      products(itemSubType:" +content+") { \\r\\n        productId\\r\\n        price\\r\\n        sellerAgentAddress\\r\\n        sellerAvatarAddress\\r\\n        itemUsable {\\r\\n          id\\r\\n          itemId\\r\\n          grade\\r\\n          elementalType\\r\\n          itemType\\r\\n          itemSubType\\r\\n        }\\r\\n        costume {\\r\\n          id\\r\\n          itemId\\r\\n          grade\\r\\n          elementalType\\r\\n          itemType\\r\\n          itemSubType\\r\\n        }\\r\\n      }\\r\\n    }\\r\\n  }\\r\\n}\",\"variables\":{}}",
+            request.AddParameter("application/json", "{\"query\":\"query {\\r\\n  stateQuery {\\r\\n    shop {\\r\\n      products(itemSubType:" + content + ") { \\r\\n        productId\\r\\n        price\\r\\n        sellerAgentAddress\\r\\n        sellerAvatarAddress\\r\\n        itemUsable {\\r\\n          id\\r\\n          itemId\\r\\n          grade\\r\\n          elementalType\\r\\n          itemType\\r\\n          itemSubType\\r\\n        }\\r\\n        costume {\\r\\n          id\\r\\n          itemId\\r\\n          grade\\r\\n          elementalType\\r\\n          itemType\\r\\n          itemSubType\\r\\n        }\\r\\n      }\\r\\n    }\\r\\n  }\\r\\n}\",\"variables\":{}}",
                        ParameterType.RequestBody);
 
             IRestResponse response = client.Execute(request);
@@ -228,59 +130,470 @@ namespace C9_NCG_DiscordBot
             }
         }
 
-        public static async Task Alarm(DiscordClient client2)
+        public static void RunChain()
         {
-            bool need = true;
-            string[] addresses = { "0x583E09c9aA2d204e0089C7ccB212c76bE41D294c", "0xC8C3C19842f6ca03848c57100b2e04EB608Da9cd", "0xeC64FcE292B1a3544d5C3A070280c807FEf7A0cC", "0xe219608e22D3A9d345d1E23F3245A313f23eF164", "0x6819ee33C56584a54ae572E7d85240b30815f605", "0xbBB97256a63339144efEAe4E7e244b21632AE03e", "0x8F69d940f58783acC9ed89DF1B1fB10686d2CD2C", "0x894d673bcD5594b0AdA5CFbf03aC3b454e348fdD", "0x849219d33E2dc1429DceFfe7dB0eF40D430Cd6a2", "0x6819ee33C56584a54ae572E7d85240b30815f605", "0xC8C3C19842f6ca03848c57100b2e04EB608Da9cd", "0x583E09c9aA2d204e0089C7ccB212c76bE41D294c"};
-            Communication comms = new Communication();
-            while (need)
+            while (true)
+            {
+                Process[] processes = Process.GetProcessesByName("NineChronicles.Headless.Executable");
+                if (processes.Length == 0)
+                {
+                    Console.WriteLine("Chain is down");
+                    System.Diagnostics.Process.Start("C:\\publish\\run.bat");
+                }
+                else
+                {
+                    Console.WriteLine("Running");
+                }
+                Thread.Sleep(320000);
+            }
+        }
+
+        public static async Task BackupDBAsync()
+        {
+            Console.WriteLine("DB Backup System Online");
+            while (true)
             {
                 var sw1 = Stopwatch.StartNew();
-                for (int ix = 0; ix < 60; ++ix) Thread.Sleep(1000);
+                for (int ix = 0; ix < 15; ++ix) Thread.Sleep(60000);
                 sw1.Stop();
-                foreach (string address in addresses)
+
+                // Get the object used to communicate with the server.
+                FtpWebRequest request = (FtpWebRequest)WebRequest.Create("ftp://ftp.byethost11.com");
+                request.Method = WebRequestMethods.Ftp.UploadFile;
+
+                // This example assumes the FTP site uses anonymous logon.
+                using (var client = new WebClient())
                 {
-                    Console.WriteLine(address);
-                    int state = await AlarmReport(address);
-                    if (state == 1)
-                    {
-                        await comms.WarningTransfer(client2, address);
-                        break;
-                    }
-                    Console.WriteLine("next");
+                    client.Credentials = new NetworkCredential("b11_29437872", "ncgmpassword");
+                    client.UploadFile("ftp://ftpupload.net/htdocs/backup/database.db", "database.db");
                 }
             }
         }
 
-        public static async Task<int> AlarmReport(string address)
+        public static void Miningwhitelist(DiscordClient ctx)
         {
-            var client = new RestClient("http://localhost:23061/graphql");
-            client.Timeout = 200000;
+            ctx.MessageCreated += MessageCreatedHandler;
+        }
+
+        private static Task MessageCreatedHandler(DiscordClient sender, MessageCreateEventArgs e)
+        {
+            try
+            {
+                int approved = 0;
+                var pass = DiscordEmoji.FromName(sender, ":donggeul_pat_01:");
+                var fail = DiscordEmoji.FromName(sender, ":donggeul_04:");
+
+                var memberid = e.Guild.GetMemberAsync(e.Message.Author.Id);
+                var message = e.Message;
+                if (!message.Content.Contains("0x") || message.ChannelId != 880743387916009522)
+                {
+                    //not valid
+                }
+                else
+                {
+                    var joindate = memberid.Result.JoinedAt;
+                    var today = DateTime.Now;
+                    //how long in days the user joined.
+                    var howlong = (today - joindate).TotalDays;
+
+                    var result = Blocks.Checklevel(e.Message.Content.ToString());
+                    var result2 = Blocks.CheckMonster(e.Message.Content.ToString());
+
+                    if (result == 1 && result2 == 1)
+                        message.CreateReactionAsync(pass).ConfigureAwait(false);
+                    else
+                        message.CreateReactionAsync(fail).ConfigureAwait(false);
+
+
+
+                    return null;
+                }
+
+                return null;
+            }
+            catch (Exception ex) 
+            { 
+                Console.WriteLine("Message got deleted");
+                var fail = DiscordEmoji.FromName(sender, ":donggeul_04:");
+                e.Message.CreateReactionAsync(fail).ConfigureAwait(false);
+                return null; 
+            }
+        }
+
+        public static async void UpdateStatusAsync(DiscordClient ctx)
+        {
+            var client = new RestClient("https://api.coingecko.com/api/v3/coins/wrapped-ncg");
+            int warn = 1;
+            int eventfinish = 1;
+            int eventlastday = 1;
+
+            while (true)
+            {
+                DiscordChannel guildChannel = await ctx.GetChannelAsync(856196469727035432);
+
+                try
+                {
+                    Thread.Sleep(10000);
+                    client.Timeout = -1;
+                    var request = new RestRequest(Method.GET);
+                    IRestResponse response = client.Execute(request);
+
+                    JObject joResponse = JObject.Parse(response.Content);
+
+                    JValue marketdata = (JValue)joResponse["market_data"]["current_price"]["usd"];
+                    string price = marketdata.ToString();
+
+                    DSharpPlus.Entities.DiscordActivity activity = new DSharpPlus.Entities.DiscordActivity();
+                    activity.Name = "WNCG: " + marketdata + "$";
+                    await ctx.UpdateStatusAsync(activity);
+
+                    Thread.Sleep(10000);
+                    float topblock = GetLatestBlock();
+                    activity.Name = "Top Block: " + topblock;
+                    await ctx.UpdateStatusAsync(activity);
+
+                    SqliteDataAccess db = new SqliteDataAccess();
+                    float arenafinish = db.ArenaBlock();
+
+                    Thread.Sleep(10000);
+                    //check if arena is gone
+                    if (arenafinish < topblock)
+                    {
+                        await db.UpdateArena(arenafinish + 56000);
+                        warn = 1;
+                        eventfinish = 1;
+                        eventlastday = 1;
+                    }
+                    else
+                    {
+                        float arenaignore = db.ArenaBlockIgnore();
+
+                        if (arenaignore < topblock && warn == 0)
+                        {
+                            await ctx.SendMessageAsync(guildChannel, "**WARNING** Arena Ticket have been refreshed. <@&885844994156560435>");
+                            warn = 1;
+                        }
+
+                            int blockdiff = (int)(Math.Round(arenafinish) - (int)Math.Round(topblock));
+                        int remainder, quotient = Math.DivRem(blockdiff, 2000, out remainder);
+                        //Console.WriteLine(remainder);
+                        int time = (remainder * 11) / 60;
+                        float left = time / 60;
+                        string str = TimeSpan.FromMinutes(time).ToString();
+                        activity.Name = "Arena Timer: " + str;
+                        await ctx.UpdateStatusAsync(activity);
+
+                        Console.WriteLine(left);
+                        if(arenafinish - topblock < 100 && eventfinish == 1)
+                        {
+                            int eventleft = (int)(Math.Round(arenafinish) - Math.Round(topblock));
+                            eventleft = (eventleft * 11) / 60;
+                            await ctx.SendMessageAsync(guildChannel, "**WARNING** Arena Week finishing in aproximately " + eventleft + " minutes. <@&885844994156560435>");
+                            eventfinish = 0;
+                        }
+                        else if (arenafinish - topblock < 12000 && eventlastday == 1)
+                        {
+                            int eventleft = (int)(Math.Round(arenafinish) - Math.Round(topblock));
+                            eventleft = (eventleft * 11) / 60;
+                            eventleft = eventleft / 60;
+                            await ctx.SendMessageAsync(guildChannel, "**WARNING** Arena Week finishing in aproximately " + eventleft + " hours. <@&885844994156560435>");
+
+                            eventlastday = 0;
+                        }
+                        else if (left < 1 && warn == 1)
+                        {
+                            await ctx.SendMessageAsync(guildChannel, "**WARNING** Arena Ticket refresh in around " + time + " minutes. <@&885844994156560435>");
+                            var ignore = topblock + remainder;
+                            await db.UpdateArenaIgnore(ignore);
+                            warn = 0;
+                        }
+                    }
+                    Thread.Sleep(10000);
+                }
+                catch(Exception ex) { };
+            }
+        }
+
+        public static float GetLatestBlock()
+        {
+            var client = new RestClient("https://9c-main-full-state.planetarium.dev/graphql");
+            client.Timeout = -1;
             var request = new RestRequest(Method.POST);
             request.AddHeader("Content-Type", "application/json");
-            request.AddParameter("application/json", "{\"query\":\"query{\\r\\n chainQuery{transactionQuery{transactions(desc:true signer:\\\""+address+"\\\" limit:10){signer,actions{inspection}}}}\\r\\n}\",\"variables\":{}}",
+            request.AddParameter("application/json", "{\"query\":\"query{nodeStatus{topmostBlocks(limit: 1){index}}}\",\"variables\":{}}",
                        ParameterType.RequestBody);
             IRestResponse response = client.Execute(request);
 
-            try
-            {
-                var resultObjects = AllChildren(JObject.Parse(response.Content))
-               .First(c => c.Type == JTokenType.Array && c.Path.Contains("transactions"))
-               .Children<JObject>();
+            JObject joResponse = JObject.Parse(response.Content);
 
-                foreach (JObject result in resultObjects)
-                {
-                    var text = result["actions"];
-                    string tstring = text.ToString();
-                    if (tstring.Contains("transfer_asset", StringComparison.OrdinalIgnoreCase))
-                    {
-                        Console.WriteLine("yes");
-                        return 1;
-                    }
-                }
+            JArray marketdata = (JArray)joResponse["data"]["nodeStatus"]["topmostBlocks"];
+            JValue block = (JValue)marketdata[0]["index"];
+            float topblock = float.Parse(block.ToString());
+            return topblock;
+
+        }
+
+        //public static async Task PvpExploitFinderAsync(DiscordClient ctx)
+        //{
+
+        //    DiscordChannel guildChannel = await ctx.GetChannelAsync(856196469727035432);
+
+        //    //string thh = "0xD31B391b156A4093310efdecFc8f04417e153c58";
+
+        //    string bluewrath = "0x7F9EB9E3A73a6F242cA4Aa2329e4F1cc8263417B";
+
+        //    int alarm = 1;
+
+        //    while (true)
+        //    {
+        //        Thread.Sleep(90000);
+        //        List<JObject> BabinEquipList = await GetData();
+
+        //        for (int i = 0; i < BabinEquipList.Count - 1; i++)
+        //        {
+        //            Console.WriteLine(BabinEquipList[i]["itemId"]);
+        //            var array = (JArray)BabinEquipList[i]["transactions"];
+        //            var signer = (JValue)array[0]["signer"];
+        //            var actionarray = (JArray)array[0]["actions"];
+        //            var text = actionarray.ToString();
+
+        //            if(text.Contains("ranking_battle6"))
+        //            {
+        //                Console.WriteLine("Exploiter Found");
+        //                ctx.SendMessageAsync(guildChannel, "Exploiter Found with Public Key: " + signer.ToString());
+        //            }
+        //            else
+        //            {
+        //                Console.WriteLine(text);
+        //            }
+                    
+        //            //if (itemid == babinarmor && alarm == 1)
+        //            //{
+        //            //    Console.WriteLine("It is the expected Armor");
+        //            //    //Is it equipped?
+        //            //    string equipped = (string)(JValue)BabinEquipList[i]["equipped"];
+        //            //    if (equipped != "True")
+        //            //    {
+        //            //        Console.WriteLine("Busted");
+        //            //        ctx.SendMessageAsync(guildChannel, "SECRETUSER Expected Armor Missing, take a screenshot. Character likely naked. <@145915312343220224> <@256686873764823041>");
+        //            //        alarm = 0;
+        //            //    }
+        //            //    else
+        //            //        Console.WriteLine("Armor is equipped as normal :(");
+        //            //}
+        //        }
+        //    }
+        //}
+
+        //public static async Task PvpExploitFinderAsync2(DiscordClient ctx)
+        //{
+
+        //    DiscordChannel guildChannel = await ctx.GetChannelAsync(856196469727035432);
+
+        //    //string thh = "0xD31B391b156A4093310efdecFc8f04417e153c58";
+
+        //    string bluetooth = "0xb4F04A910b7e404b504eEA9eDf8C9a0F63aDDbba";
+        //    string babinarmor = "e6718494-f788-45ee-9730-7b334250ef62";
+        //    string babinbelt = "3107f7b7-7ed6-47e2-8421-d89beab83dfc";
+        //    string babinneck = "d3ecb37a-04d5-490c-9227-32355b9a34c8";
+        //    string babinwep = "a6bfa4d2-08f0-4963-b3c5-571462ee6ce8";
+        //    int alarm = 1;
+
+        //    while (true)
+        //    {
+        //        Thread.Sleep(30000);
+        //        List<JObject> BabinEquipList = await GetData(bluetooth);
+
+        //        if (alarm == 0)
+        //        {
+        //            Thread.Sleep(240000);
+        //            alarm = 1;
+        //        }
+
+        //        for (int i = 0; i < BabinEquipList.Count - 1; i++)
+        //        {
+        //            Console.WriteLine(BabinEquipList[i]["itemId"]);
+        //            string itemid = (string)(JValue)BabinEquipList[i]["itemId"];
+        //            if (itemid == babinarmor && alarm == 1)
+        //            {
+        //                Console.WriteLine("It is the expected Armor");
+        //                //Is it equipped?
+        //                string equipped = (string)(JValue)BabinEquipList[i]["equipped"];
+        //                if (equipped != "True")
+        //                {
+        //                    Console.WriteLine("Busted");
+        //                    ctx.SendMessageAsync(guildChannel, "SECRETUSER-ALT Expected Armor Missing, take a screenshot. Character likely naked.");
+        //                    alarm = 0;
+        //                }
+        //                else
+        //                    Console.WriteLine("Armor is equipped as normal :(");
+        //            }
+
+        //            if (itemid == babinbelt && alarm == 1)
+        //            {
+        //                Console.WriteLine("It is the expected Belt");
+        //                //Is it equipped?
+        //                string equipped = (string)(JValue)BabinEquipList[i]["equipped"];
+        //                if (equipped != "True")
+        //                {
+        //                    Console.WriteLine("Busted");
+        //                    ctx.SendMessageAsync(guildChannel, "SECRETUSER-ALT Expected Belt Missing, take a screenshot. Character likely naked.");
+        //                    alarm = 0;
+        //                }
+        //                else
+        //                    Console.WriteLine("Belt is equipped as normal :(");
+        //            }
+
+        //            if (itemid == babinneck && alarm == 1)
+        //            {
+        //                Console.WriteLine("It is the expected Neck");
+        //                //Is it equipped?
+        //                string equipped = (string)(JValue)BabinEquipList[i]["equipped"];
+        //                if (equipped != "True")
+        //                {
+        //                    Console.WriteLine("Busted");
+        //                    ctx.SendMessageAsync(guildChannel, "SECRETUSER-ALT Expected Neck Missing, take a screenshot. Character likely naked.");
+        //                    alarm = 0;
+        //                }
+        //                else
+        //                    Console.WriteLine("Neck is equipped as normal :(");
+        //            }
+
+        //            if (itemid == babinwep && alarm == 1)
+        //            {
+        //                Console.WriteLine("It is the expected Wep");
+        //                //Is it equipped?
+        //                string equipped = (string)(JValue)BabinEquipList[i]["equipped"];
+        //                if (equipped != "True")
+        //                {
+        //                    Console.WriteLine("Busted");
+        //                    ctx.SendMessageAsync(guildChannel, "SECRETUSER-ALT Expected Wep Missing, take a screenshot. Character likely naked.");
+        //                    alarm = 0;
+        //                }
+        //                else
+        //                    Console.WriteLine("Wep is equipped as normal :(");
+        //            }
+        //        }
+        //    }
+        //}
+
+        //public static async Task PvpExploitFinderAsync3(DiscordClient ctx)
+        //{
+
+        //    DiscordChannel guildChannel = await ctx.GetChannelAsync(856196469727035432);
+
+        //    //string thh = "0xD31B391b156A4093310efdecFc8f04417e153c58";
+
+        //    string thh = "a73d918da6b0faa5fe0cd9a474444153f13a7629";
+        //    string babinarmor = "fb31977e-f756-4dde-94ba-a494eeee53f9";
+        //    string babinbelt = "808fb02a-14fe-4532-b5d5-163c0035a523";
+        //    string babinneck = "1996a652-3b68-4c56-b3a8-084fe481c5db";
+        //    string babinwep = "161e8b95-6721-4c76-82ec-b8f89298fbd0";
+        //    int alarm = 1;
+
+        //    while (true)
+        //    {
+        //        Thread.Sleep(30000);
+        //        List<JObject> BabinEquipList = await GetData(thh);
+
+        //        if (alarm == 0)
+        //        {
+        //            Thread.Sleep(240000);
+        //            alarm = 1;
+        //        }
+
+        //        for (int i = 0; i < BabinEquipList.Count - 1; i++)
+        //        {
+        //            Console.WriteLine(BabinEquipList[i]["itemId"]);
+        //            string itemid = (string)(JValue)BabinEquipList[i]["itemId"];
+        //            if (itemid == babinarmor && alarm == 1)
+        //            {
+        //                Console.WriteLine("It is the expected Armor");
+        //                //Is it equipped?
+        //                string equipped = (string)(JValue)BabinEquipList[i]["equipped"];
+        //                if (equipped != "True")
+        //                {
+        //                    Console.WriteLine("Busted");
+        //                    ctx.SendMessageAsync(guildChannel, "thh Expected Armor Missing, take a screenshot. Character likely naked.");
+        //                    alarm = 0;
+        //                }
+        //                else
+        //                    Console.WriteLine("Armor is equipped as normal :(");
+        //            }
+
+        //            if (itemid == babinbelt && alarm == 1)
+        //            {
+        //                Console.WriteLine("It is the expected Belt");
+        //                //Is it equipped?
+        //                string equipped = (string)(JValue)BabinEquipList[i]["equipped"];
+        //                if (equipped != "True")
+        //                {
+        //                    Console.WriteLine("Busted");
+        //                    ctx.SendMessageAsync(guildChannel, "thh Expected Belt Missing, take a screenshot. Character likely naked.");
+        //                    alarm = 0;
+        //                }
+        //                else
+        //                    Console.WriteLine("Belt is equipped as normal :(");
+        //            }
+
+        //            if (itemid == babinneck && alarm == 1)
+        //            {
+        //                Console.WriteLine("It is the expected Neck");
+        //                //Is it equipped?
+        //                string equipped = (string)(JValue)BabinEquipList[i]["equipped"];
+        //                if (equipped != "True")
+        //                {
+        //                    Console.WriteLine("Busted");
+        //                    ctx.SendMessageAsync(guildChannel, "thh Expected Neck Missing, take a screenshot. Character likely naked.");
+        //                    alarm = 0;
+        //                }
+        //                else
+        //                    Console.WriteLine("Neck is equipped as normal :(");
+        //            }
+
+        //            if (itemid == babinwep && alarm == 1)
+        //            {
+        //                Console.WriteLine("It is the expected Wep");
+        //                //Is it equipped?
+        //                string equipped = (string)(JValue)BabinEquipList[i]["equipped"];
+        //                if (equipped != "True")
+        //                {
+        //                    Console.WriteLine("Busted");
+        //                    ctx.SendMessageAsync(guildChannel, "thh Expected Wep Missing, take a screenshot. Character likely naked.");
+        //                    alarm = 0;
+        //                }
+        //                else
+        //                    Console.WriteLine("Wep is equipped as normal :(");
+        //            }
+        //        }
+        //    }
+        //}
+
+        public static async Task<List<JObject>> GetData()
+        {
+            Console.WriteLine("Calling API");
+            var client = new RestClient("https://9c-main-full-state.planetarium.dev/graphql");
+            client.Timeout = -1;
+            var request = new RestRequest(Method.POST);
+            request.AddHeader("Content-Type", "application/json");
+            //Console.WriteLine(address);
+            request.AddParameter("application/json", "{\"query\":\"query{\\r\\n  chainQuery{blockQuery{blocks(desc: true, limit: 20){index,transactions{signer,actions{inspection}}}}\\r\\n  }\\r\\n}\",\"variables\":{}}",
+                                                     ParameterType.RequestBody);
+            IRestResponse response = client.Execute(request);
+
+            var resultObjects = AllChildren(JObject.Parse(response.Content))
+            .First(c => c.Type == JTokenType.Array && c.Path.Contains("blocks"))
+            .Children<JObject>();
+
+            List<JObject> ItemList = new List<JObject>();
+
+            foreach (JObject result in resultObjects)
+            {
+
+                ItemList.Add(result);
             }
-            catch { return 0; }
-            return 0;
+
+            return ItemList;
         }
     }
 }

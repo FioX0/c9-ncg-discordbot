@@ -259,6 +259,7 @@ namespace C9_NCG_DiscordBot
             return null;
         }
 
+
         public async Task<bool> QueueWithdraw(TipModel profile, ulong discordid, string key, float amount, int authorised, int attempt = 0)
         {
 
@@ -509,25 +510,67 @@ public static async Task<RepModel> LoadRepProfile(string discordid)
         }
         #endregion
 
-        #region UnionMiner
+        #region Extras
 
-        public async Task<ProfileModel[]> LoadALLUnionMiners()
+
+        public float ArenaBlock()
         {
+            float output;
+            try
+            {
+                string query = "Select Value from Arena where Name = 'ArenaFinish';";
                 using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
                 {
-                    try
-                    {
-                        var sql = @"Select * from NCGProfile WHERE Union = 1;";
-
-                        using (var multi = cnn.QueryMultiple(sql))
-                        {
-                            var customer = multi.Read<ProfileModel>().ToArray();
-                            return customer;
-                        }
-                    }
-                    catch (Exception) { }
+                    output = cnn.QueryFirst<float>(query);
+                    return output;
                 }
-                return null;
+            }
+            catch { };
+            return 0;
+        }
+
+        public float ArenaBlockIgnore()
+        {
+            float output;
+            try
+            {
+                string query = "Select Value from Arena where Name = 'ArenaIgnore';";
+                using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+                {
+                    output = cnn.QueryFirst<float>(query);
+                    return output;
+                }
+            }
+            catch { };
+            return 0;
+        }
+
+        public async Task<bool> UpdateArena(float value)
+        {
+            string sql = "UPDATE Arena SET Value = @value WHERE Name = 'ArenaFinish'";
+            using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+            {
+                var affectedRows = cnn.Execute(sql, new { value = value }); ;
+
+                if (affectedRows > 0)
+                    return true;
+                else
+                    return false;
+            }
+        }
+
+        public async Task<bool> UpdateArenaIgnore(float value)
+        {
+            string sql = "UPDATE Arena SET Value = @value WHERE Name = 'ArenaIgnore'";
+            using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+            {
+                var affectedRows = cnn.Execute(sql, new { value = value }); ;
+
+                if (affectedRows > 0)
+                    return true;
+                else
+                    return false;
+            }
         }
         #endregion
     }

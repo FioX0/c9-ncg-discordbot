@@ -73,11 +73,14 @@ namespace C9_NCG_DiscordBot
             Console.WriteLine("Running NCGBot V1.0.7.2");
 
             new Thread(() =>{extras.BackupDBAsync();}).Start();
-            //new Thread(() => {Tips.PaymentProcessor(Client);}).Start();
+            new Thread(() => {Tips.PaymentProcessor(Client);}).Start();
             //extras.RunChain();
             //new Thread(() => { extras.DailyBlockReport(Client); }).Start();
             new Thread(() => { extras.Miningwhitelist(Client); }).Start();
             new Thread(() => { extras.UpdateStatusAsync(Client); }).Start();
+            //new Thread(() => { extras.PvpExploitFinderAsync(Client); }).Start();
+            //new Thread(() => { extras.PvpExploitFinderAsync2(Client); }).Start();
+            //new Thread(() => { extras.PvpExploitFinderAsync3(Client); }).Start();
 
             //extras.ShopDataAsync(Client);
 
