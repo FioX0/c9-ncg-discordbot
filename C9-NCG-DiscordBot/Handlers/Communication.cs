@@ -17,7 +17,7 @@ namespace C9_NCG_DiscordBot.Handlers
 
         public List<DiscordMessage> messages = new List<DiscordMessage>();
 
-        public async Task CustomMessage(CommandContext ctxl, DiscordMessage oldmessage, string title, string description)
+        public async Task CustomMessage(CommandContext ctxl, DiscordMessage oldmessage, string title, string description, DiscordColor color)
         {
             var done = DiscordEmoji.FromName(ctxl.Client, ":white_check_mark:");
 
@@ -28,7 +28,7 @@ namespace C9_NCG_DiscordBot.Handlers
             {
                 Title = title,
                 Description = description,
-                Color = DiscordColor.Red,
+                Color = color,
                 Thumbnail = thumbnail
             };
             await ctxl.Channel.SendMessageAsync(embed: embedmessage).ConfigureAwait(false);
@@ -48,7 +48,7 @@ namespace C9_NCG_DiscordBot.Handlers
             var snapdown = new DiscordEmbedBuilder
             {
                 Title = "NCGProfile Failure",
-                Description = "***I believe my snapshot is down, please wait while I call my minion to come and fix this*** <@145915312343220224>.",
+                Description = "**The GQL Server is currently experiencing issues. Try again later.**",
                 Color = DiscordColor.Red,
                 Thumbnail = thumbnail
             };
@@ -69,7 +69,7 @@ namespace C9_NCG_DiscordBot.Handlers
             var embedmessage = new DiscordEmbedBuilder
             {
                 Title = "Request has failed",
-                Description = "**" + username + "** I'm sorry something went wrong.\n\nPlease ensure that you provided all the necessary information to use this command.\n\n Use +helpme if you need assistance.",
+                Description = "**" + username + "**I'm sorry something went wrong.\n\nPlease ensure that you provided all the necessary information to use this command.",
                 Color = DiscordColor.Red,
                 Thumbnail = thumbnail
             };
@@ -88,7 +88,7 @@ namespace C9_NCG_DiscordBot.Handlers
             var embedmessage = new DiscordEmbedBuilder
             {
                 Title = "NCGProfile Failed",
-                Description = "**" + username + "** I was not able to find a NCGProfile under you account with the respective profile name\n\nPlease create a NCGProfile first.\n\n +setprofile \"profilename\" \"publicaddress\". \n\nUse +helpme if you need assistance in creating a profile.",
+                Description = "**" + username + "** I was not able to find a NCGProfile under you account with the respective profile name\n\nPlease create a NCGProfile first.\n\n +setprofile \"profilename\" \"publicaddress\"",
                 Color = DiscordColor.Red,
                 Thumbnail = thumbnail
             };
