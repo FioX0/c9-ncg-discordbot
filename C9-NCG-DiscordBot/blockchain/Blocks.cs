@@ -602,7 +602,7 @@ namespace C9_NCG_DiscordBot.blockchain
             while (loop < 10)
             {
                 Console.WriteLine(key);
-                var client = new RestClient("https://9c-main-full-state.planetarium.dev/graphql");
+                var client = new RestClient("https://mars.9cscan.com/graphql");
                 client.Timeout = -1;
                 var request = new RestSharp.RestRequest(Method.POST);
                 request.AddHeader("Content-Type", "application/json");
@@ -625,7 +625,7 @@ namespace C9_NCG_DiscordBot.blockchain
             int loop = 0;
             while (loop < 10)
             {
-                var client = new RestClient("https://9c-main-full-state.planetarium.dev/graphql");
+                var client = new RestClient("https://mars.9cscan.com/graphql");
                 client.Timeout = -1;
                 var request = new RestSharp.RestRequest(Method.POST);
                 request.AddHeader("Content-Type", "application/json");
@@ -648,7 +648,7 @@ namespace C9_NCG_DiscordBot.blockchain
             int loop = 0;
             while (loop < 10)
             {
-                var client = new RestClient("https://9c-main-full-state.planetarium.dev/graphql");
+                var client = new RestClient("https://mars.9cscan.com/graphql");
                 client.Timeout = -1;
                 var request = new RestSharp.RestRequest(Method.POST);
                 request.AddHeader("Content-Type", "application/json");
@@ -854,7 +854,7 @@ namespace C9_NCG_DiscordBot.blockchain
         public static int Checklevel(string address)
         {
             int pass = 0;
-            var client = new RestClient("https://9c-main-full-state.planetarium.dev/graphql");
+            var client = new RestClient("https://mars.9cscan.com/graphql");
             client.Timeout = -1;
             var request = new RestRequest(Method.POST);
             request.AddHeader("Content-Type", "application/json");
@@ -883,7 +883,7 @@ namespace C9_NCG_DiscordBot.blockchain
         public static int CheckMonster(string address)
         {
             int pass = 0;
-            var client = new RestClient("https://9c-main-full-state.planetarium.dev/graphql");
+            var client = new RestClient("https://mars.9cscan.com/graphql");
             client.Timeout = -1;
             var request = new RestRequest(Method.POST);
             request.AddHeader("Content-Type", "application/json");

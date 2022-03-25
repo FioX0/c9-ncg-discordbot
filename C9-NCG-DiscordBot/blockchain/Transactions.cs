@@ -13,7 +13,7 @@ namespace C9_NCG_DiscordBot.blockchain
             try
             {
                 Console.WriteLine("Calling API");
-                var client = new RestClient("https://9c-main-full-state.planetarium.dev/graphql");
+                var client = new RestClient("https://mars.9cscan.com/graphql");
                 client.Timeout = -1;
                 var request = new RestSharp.RestRequest(Method.POST);
                 request.AddHeader("Content-Type", "application/json");

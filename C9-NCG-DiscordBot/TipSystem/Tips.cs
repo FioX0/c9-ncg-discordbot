@@ -4,6 +4,7 @@ using C9_NCG_DiscordBot.Models;
 using DSharpPlus;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using RestSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -218,24 +219,23 @@ namespace C9_NCG_DiscordBot.TipSystem
             var comms = new Communication();
             var ncg = new NCG();
             Console.WriteLine("PaymentProcessor Enabled");
-            await ChainReady (ncg, db);
             while(true)
             {
                 //every 2 minutes we take 1 payment to process.
                 var sw1 = Stopwatch.StartNew();
-                for (int ix = 0; ix < 30; ++ix) Thread.Sleep(1000);
+                for (int ix = 0; ix < 30; ++ix) await Task.Delay(1000);
                 sw1.Stop();
                 //Console.WriteLine("Sleep: {0}", sw1.ElapsedMilliseconds);
                 //are we good to proceed?
                 await ChainReady(ncg, db);
                 var enabled = db.TipRedeemEnabled();
-                if(enabled.Result == 1 && ncg.NCGGold("0x6AEbea29B88a4b6BB21B877bb6b0E6C6F8C247B8") != null)
+                if(enabled.Result == 1 && ncg.NCGGold("0x6AEbea29B88a4b6BB21B877bb6b0E6C6F8C247B8") != null && AddressCheck("23061") == "0x6AEbea29B88a4b6BB21B877bb6b0E6C6F8C247B8")
                 {
                     Console.WriteLine("TipRedeem is Enabled");
                     PaymentModel paymentprofile = await db.CheckPaymentQueue();
                     TipModel profile = await db.LoadTipProfileForBalance(paymentprofile.DiscordUserId.ToString());
 
-                    if (paymentprofile.Id != 0)
+                    if (paymentprofile.Id != 0 && paymentprofile.Amount <= profile.Balance)
                     {
                         if (ncg.NCGGold("0x6AEbea29B88a4b6BB21B877bb6b0E6C6F8C247B8") == null)
                         {
@@ -265,14 +265,14 @@ namespace C9_NCG_DiscordBot.TipSystem
                                 await db.DumpPayment("RedeemFail", paymentprofile, paymentprofile, paymentprofile.Amount, txid);
                                 Console.WriteLine("Chain is Outdated");
                                 await db.UpdateTipRedeemStatus(0);
-                                foreach (var process in Process.GetProcessesByName("NineChronicles.Headlesss.Executable.exe"))
-                                {
-                                    process.Kill();
-                                }
-                                System.Diagnostics.Process.Start("C:/Users/carina/AppData/Local/Programs/Nine Chronicles/resources/app/publish/test.bat");
-                                var sw3 = Stopwatch.StartNew();
-                                for (int ix = 0; ix < 30; ++ix) Thread.Sleep(60000);
-                                sw3.Stop();
+                                //foreach (var process in Process.GetProcessesByName("NineChronicles.Headlesss.Executable.exe"))
+                                //{
+                                //    process.Kill();
+                                //}
+                                //System.Diagnostics.Process.Start("C:/Users/carina/AppData/Local/Programs/Nine Chronicles/resources/app/publish/test.bat");
+                                //var sw3 = Stopwatch.StartNew();
+                                //for (int ix = 0; ix < 30; ++ix) Thread.Sleep(60000);
+                                //sw3.Stop();
                             }
                             else if (txid != null && txverify != null)
                             {
@@ -294,6 +294,27 @@ namespace C9_NCG_DiscordBot.TipSystem
                     Console.WriteLine("TipRedeem is Disabled");
                 }
             }
+        }
+
+        public static string AddressCheck(string port)
+        {
+            var client = new RestClient("http://localhost:23061/graphql");
+            client.Timeout = -1;
+            var request = new RestRequest(Method.POST);
+            request.AddHeader("Content-Type", "application/json");
+            request.AddParameter("application/json", "{\"query\":\"query{\\r\\n  minerAddress\\r\\n}\",\"variables\":{}}",
+                       ParameterType.RequestBody);
+            try
+            {
+                IRestResponse response = client.Execute(request);
+                JObject joResponse = JObject.Parse(response.Content);
+
+                JValue block = (JValue)joResponse["data"]["minerAddress"];
+                string topblock = block.ToString();
+
+                return topblock;
+            }
+            catch (Exception ex) { return ""; };
         }
 
         public static async Task<bool> ChainReady(NCG ncg, SqliteDataAccess db)

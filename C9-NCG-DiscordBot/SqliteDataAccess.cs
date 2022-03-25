@@ -6,17 +6,23 @@ using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Data.SQLite;
+using System.Data.SqlClient;
+using MySqlConnector;
 
 namespace C9_NCG_DiscordBot
 {
+
     public class SqliteDataAccess
     {
+        static String connectingstring = "Server=ncgm2.c9nkjivvja9b.us-east-2.rds.amazonaws.com;Port=3306;UID=ncgm;PWD=ncgm;Database=ncgm";
+        static String connectingstring2 = "Server=ncgm2.c9nkjivvja9b.us-east-2.rds.amazonaws.com;Port=3306;UID=ncgm;PWD=ncgm;Database=rpc";
+
         # region NCG
         public async Task<ProfileModel> LoadProfile(ulong discordid, string alias)
         {
             if (alias != "")
             {
-                using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+                using (MySqlConnection cnn = new MySqlConnection(connectingstring))
                 {
                     try
                     {
@@ -36,7 +42,8 @@ namespace C9_NCG_DiscordBot
         {
             if (alias != "")
             {
-                using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+                
+                using (MySqlConnection cnn = new MySqlConnection(connectingstring))
                 {
                     try
                     {
@@ -57,7 +64,7 @@ namespace C9_NCG_DiscordBot
 
         public static bool SaveProfile(ProfileModel profile)
         {
-            using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+            using (MySqlConnection cnn = new MySqlConnection(connectingstring))
             {
                 Console.WriteLine(profile.Id);
                 cnn.Execute("insert into NCGProfile (DiscordId,PublicKey,Value,alias) values (@Id, @PublicKey, @Value, @alias);", profile);
@@ -68,7 +75,7 @@ namespace C9_NCG_DiscordBot
         public static bool UpdateProfileKey(ProfileModel profile)
         {
             string sql = "UPDATE NCGProfile SET publickey = @publickey WHERE DiscordId = @id and alias =@alias;";
-            using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+            using (MySqlConnection cnn = new MySqlConnection(connectingstring))
             {
 
                 var affectedRows = cnn.Execute(sql, new { publickey = profile.PublicKey, id = profile.Id, alias = profile.alias }); ;
@@ -80,7 +87,7 @@ namespace C9_NCG_DiscordBot
 
         public static int CheckProfile(ProfileModel profile)
         {
-            using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+            using (MySqlConnection cnn = new MySqlConnection(connectingstring))
             {
                 string query = "Select ID from NCGProfile WHERE DiscordId = @id and alias =@alias;";
                 try
@@ -97,7 +104,7 @@ namespace C9_NCG_DiscordBot
         public async Task<bool> UpdateProfile(ulong discordid, string alias, string value)
         {
             string sql = "UPDATE NCGProfile SET Value = @value WHERE DiscordId = @id and alias =@alias;";
-            using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+            using (MySqlConnection cnn = new MySqlConnection(connectingstring))
             {
 
                 var affectedRows = cnn.Execute(sql, new { value = value, id = discordid, alias = alias }); ;
@@ -113,7 +120,7 @@ namespace C9_NCG_DiscordBot
         #region TipSystem
         public async Task<bool> CreateTipProfile(TipModel profile)
         {
-            using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+            using (MySqlConnection cnn = new MySqlConnection(connectingstring))
             {
                 Console.WriteLine(profile.Id);
                 cnn.Execute("insert into TipProfile (DiscordId,Role,Balance) values (@Id, @Role, @Balance);", profile);
@@ -128,7 +135,7 @@ namespace C9_NCG_DiscordBot
             try
             {
                 string query = "Select * from TipProfile WHERE DiscordId = @id;";
-                using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+                using (MySqlConnection cnn = new MySqlConnection(connectingstring))
                 {
                     output = cnn.QueryFirst<TipModel>(query, new { id = discordid });
                     return output;
@@ -146,7 +153,7 @@ namespace C9_NCG_DiscordBot
             try
             {
                 string query = "Select * from TipProfile WHERE DiscordId = @id;";
-                using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+                using (MySqlConnection cnn = new MySqlConnection(connectingstring))
                 {
                     output = cnn.QueryFirst<TipModel>(query, new { id = discordid });
                     return output;
@@ -161,7 +168,7 @@ namespace C9_NCG_DiscordBot
         {
             ulong id = profile.Id;
             string sql = "UPDATE TipProfile SET Balance = @balance WHERE Id = @id;";
-            using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+            using (MySqlConnection cnn = new MySqlConnection(connectingstring))
             {
                 var affectedRows = cnn.Execute(sql, new { balance = newBalance, id = id });
                 Console.WriteLine("Affected Rows: " + affectedRows);
@@ -185,7 +192,7 @@ namespace C9_NCG_DiscordBot
 
 
             string sql = "insert into TipAudit (OriginProfileId,DestinationProfileId,Details,OriginOldAmount,OriginNewAmount,DestinationOldAmount,DestinationNewAmount,DateTime,TransactionId) values (@id, @id2, @text, @orold, @ornew, @desold, @desnew, @date, @txid);";
-            using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+            using (MySqlConnection cnn = new MySqlConnection(connectingstring))
             {
                 cnn.Execute(sql, new
                 {
@@ -210,7 +217,7 @@ namespace C9_NCG_DiscordBot
             int mentionid = Mention.ProfileId;
 
             string sql = "insert into TipAudit (OriginProfileId,DestinationProfileId,Details,OriginOldAmount,OriginNewAmount,DestinationOldAmount,DestinationNewAmount,DateTime,TransactionId) values (@id, @id2, @text, @orold, @ornew, @desold, @desnew, @date, @txid);";
-            using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+            using (MySqlConnection cnn = new MySqlConnection(connectingstring))
             {
                 cnn.Execute(sql, new
                 {
@@ -232,7 +239,7 @@ namespace C9_NCG_DiscordBot
         public async Task<bool> UpdateTipAdmin(ulong discordid, string role)
         {
             string sql = "UPDATE TipProfile SET Role = @role WHERE DiscordId = @id";
-            using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+            using (MySqlConnection cnn = new MySqlConnection(connectingstring))
             {
                 var affectedRows = cnn.Execute(sql, new { role = role, id = discordid }); ;
 
@@ -249,7 +256,7 @@ namespace C9_NCG_DiscordBot
             try
             {
                 string query = "Select sum(Balance) from TipProfile;";
-                using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+                using (MySqlConnection cnn = new MySqlConnection(connectingstring))
                 {
                     output = cnn.QueryFirst<string>(query);
                     return output;
@@ -265,7 +272,7 @@ namespace C9_NCG_DiscordBot
 
 
             string sql = "insert into PaymentQueue (ProfileId, DiscordUserId, Key, Amount, Authorised, Attempt) values (@pid, @did, @key, @amount, @auth, @attempt);";
-            using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+            using (MySqlConnection cnn = new MySqlConnection(connectingstring))
             {
                 var affectedRows = cnn.Execute(sql, new
                 {
@@ -287,7 +294,7 @@ namespace C9_NCG_DiscordBot
         public async Task<bool> RemoveWithdrawl(PaymentModel profile)
         {
             string sql = "delete from PaymentQueue where id = @id;";
-            using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+            using (MySqlConnection cnn = new MySqlConnection(connectingstring))
             {
                 var affectedRows = cnn.Execute(sql, new { @id = profile.Id }); ;
 
@@ -305,7 +312,7 @@ namespace C9_NCG_DiscordBot
             try
             {
                 string query = "Select * from PaymentQueue WHERE Authorised = @id LIMIT 1;";
-                using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+                using (MySqlConnection cnn = new MySqlConnection(connectingstring))
                 {
                     output = cnn.QueryFirst<PaymentModel>(query, new { id = randomid });
                     return output;
@@ -320,7 +327,7 @@ namespace C9_NCG_DiscordBot
         {
 
             string sql = "UPDATE TipProfile SET Balance = @amount WHERE DiscordId = @id";
-            using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+            using (MySqlConnection cnn = new MySqlConnection(connectingstring))
             {
                 var affectedRows = cnn.Execute(sql, new { amount = amount, id = discordid }); ;
 
@@ -337,7 +344,7 @@ namespace C9_NCG_DiscordBot
             try
             {
                 string query = "Select Enabled from Config where Application = 'TipRedeem';";
-                using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+                using (MySqlConnection cnn = new MySqlConnection(connectingstring))
                 {
                     output = cnn.QueryFirst<int>(query);
                     return output;
@@ -350,7 +357,7 @@ namespace C9_NCG_DiscordBot
         public async Task<bool> UpdateTipRedeemStatus(int status)
         {
             string sql = "UPDATE Config SET Enabled = @value WHERE Application = 'TipRedeem'";
-            using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+            using (MySqlConnection cnn = new MySqlConnection(connectingstring))
             {
                 var affectedRows = cnn.Execute(sql, new { value = status}); ;
 
@@ -367,7 +374,7 @@ namespace C9_NCG_DiscordBot
             try
             {
                 string query = "Select * from TipTopUp WHERE TransactionId = @id;";
-                using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+                using (MySqlConnection cnn = new MySqlConnection(connectingstring))
                 {
                     output = cnn.QueryFirst<int>(query, new { id = ID });
                     return output;
@@ -381,7 +388,7 @@ namespace C9_NCG_DiscordBot
         public async Task<bool> TipTopUpAdd(string ID, string sender)
         {
             string sql = "insert into TipTopUp (TransactionId,Sender, DateTime) values (@TransactionId, @Sender, @Date);";
-            using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+            using (MySqlConnection cnn = new MySqlConnection(connectingstring))
             {
                 var affectedRows = cnn.Execute(sql, new
                 {
@@ -404,7 +411,7 @@ namespace C9_NCG_DiscordBot
 public static async Task<RepModel> LoadRepProfile(string discordid)
         {
 
-                using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+                using (MySqlConnection cnn = new MySqlConnection(connectingstring))
                 {
                     try
                     {
@@ -422,7 +429,7 @@ public static async Task<RepModel> LoadRepProfile(string discordid)
 
         public static async Task<bool> CreateRepProfile(string discordid)
         {
-            using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+            using (MySqlConnection cnn = new MySqlConnection(connectingstring))
             {
                 cnn.Execute("insert into Reputation (UserId,PublicKey,Transactions,ComRep,TradeRep) values (@discordid, '', 0 , 0, 0);");
                 return true;
@@ -435,7 +442,7 @@ public static async Task<RepModel> LoadRepProfile(string discordid)
         {
 
             string sql = "insert into BlockReport (PublicKey,Blocks) values (@miner,@blocks);";
-            using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+            using (MySqlConnection cnn = new MySqlConnection(connectingstring))
             {
                 var affectedRows = cnn.Execute(sql, new
                 {
@@ -453,7 +460,7 @@ public static async Task<RepModel> LoadRepProfile(string discordid)
         {
 
             string sql = "DELETE FROM BlockReport;";
-            using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+            using (MySqlConnection cnn = new MySqlConnection(connectingstring))
             {
                 var affectedRows = cnn.Execute(sql);
             }
@@ -461,7 +468,7 @@ public static async Task<RepModel> LoadRepProfile(string discordid)
 
         public static async Task<BlockReportModel[]> GetBlockReportData()
         {
-            using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+            using (MySqlConnection cnn = new MySqlConnection(connectingstring))
             {
                 try
                 {
@@ -480,7 +487,7 @@ public static async Task<RepModel> LoadRepProfile(string discordid)
 
         public static async Task<int> GetBlockBlockCount()
         {
-            using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+            using (MySqlConnection cnn = new MySqlConnection(connectingstring))
             {
                 string query = "Select SUM(blocks) from BlockReport;";
                 try
@@ -497,7 +504,7 @@ public static async Task<RepModel> LoadRepProfile(string discordid)
         public static async Task<bool> UpdateBlockBlockCount(string id, string blocks)
         {
             string sql = "UPDATE BlockReport SET Control = @value WHERE PublicKey = @id;";
-            using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+            using (MySqlConnection cnn = new MySqlConnection(connectingstring))
             {
 
                 var affectedRows = cnn.Execute(sql, new { value = blocks, id = id }); ;
@@ -512,6 +519,56 @@ public static async Task<RepModel> LoadRepProfile(string discordid)
 
         #region Extras
 
+        public static bool InsertRPC(ChainModel profile)
+        {
+            using (MySqlConnection cnn = new MySqlConnection(connectingstring2))
+            {
+                cnn.Execute("insert into info (Id,address,active,difference,users) values (@nodeid, @address, @active, @index, @users);", profile);
+                return true;
+            }
+        }
+
+        public static async Task<bool> UpdateRPC(ChainModel profile)
+        {
+            if(profile.nodeid != 0)
+            {
+                string sql = "UPDATE info SET address = @Address, active = @Active, difference = @Difference, users = @Users, response_time_seconds = @Duration  WHERE Id = @id;";
+                using (MySqlConnection cnn = new MySqlConnection(connectingstring2))
+                {
+
+                    var affectedRows = cnn.Execute(sql, new { Address = profile.address, Active = profile.active, Difference = profile.index, Users = profile.users, id = profile.nodeid, Duration = profile.duration }); ;
+
+                    Console.WriteLine("Affected Rows: " + affectedRows);
+                    return true;
+                }
+            }
+            else
+            {
+                string sql = "UPDATE info SET address = @Address, active = @Active, difference = @Difference, users = @Users, response_time_seconds = @Duration  WHERE address = @Address;";
+                using (MySqlConnection cnn = new MySqlConnection(connectingstring2))
+                {
+
+                    var affectedRows = cnn.Execute(sql, new { Address = profile.address, Active = profile.active, Difference = profile.index, Users = profile.users, id = profile.nodeid, Duration = profile.duration }); ;
+
+                    Console.WriteLine("Affected Rows: " + affectedRows);
+                    return true;
+                }
+            }
+        }
+
+        public static async Task<bool> UpdateNULLRPC()
+        {
+
+            string sql = "UPDATE info SET active ='Unknown', difference = '-99999', users = '-1', response_time_seconds = '-1'";
+            using (MySqlConnection cnn = new MySqlConnection(connectingstring2))
+            {
+
+                var affectedRows = cnn.Execute(sql);
+
+                Console.WriteLine("Affected Rows: " + affectedRows);
+                return true;
+            }  
+        }
 
         public float ArenaBlock()
         {
@@ -519,7 +576,7 @@ public static async Task<RepModel> LoadRepProfile(string discordid)
             try
             {
                 string query = "Select Value from Arena where Name = 'ArenaFinish';";
-                using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+                using (MySqlConnection cnn = new MySqlConnection(connectingstring))
                 {
                     output = cnn.QueryFirst<float>(query);
                     return output;
@@ -535,7 +592,7 @@ public static async Task<RepModel> LoadRepProfile(string discordid)
             try
             {
                 string query = "Select Value from Arena where Name = 'ArenaIgnore';";
-                using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+                using (MySqlConnection cnn = new MySqlConnection(connectingstring))
                 {
                     output = cnn.QueryFirst<float>(query);
                     return output;
@@ -548,7 +605,7 @@ public static async Task<RepModel> LoadRepProfile(string discordid)
         public async Task<bool> UpdateArena(float value)
         {
             string sql = "UPDATE Arena SET Value = @value WHERE Name = 'ArenaFinish'";
-            using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+            using (MySqlConnection cnn = new MySqlConnection(connectingstring))
             {
                 var affectedRows = cnn.Execute(sql, new { value = value }); ;
 
@@ -562,7 +619,7 @@ public static async Task<RepModel> LoadRepProfile(string discordid)
         public async Task<bool> UpdateArenaIgnore(float value)
         {
             string sql = "UPDATE Arena SET Value = @value WHERE Name = 'ArenaIgnore'";
-            using (IDbConnection cnn = new SQLiteConnection("Data Source=database.db;"))
+            using (MySqlConnection cnn = new MySqlConnection(connectingstring))
             {
                 var affectedRows = cnn.Execute(sql, new { value = value }); ;
 

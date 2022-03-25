@@ -19,9 +19,10 @@ namespace C9_NCG_DiscordBot.blockchain
         public string NCGGold(string publickey)
         {
             try
-            { 
+            {
                 //Console.WriteLine("Calling API");
-                var client = new RestClient("https://9c-main-full-state.planetarium.dev/graphql");
+                var address = blockchain.NodesCheck.NodeSelector();
+                var client = new RestClient(address.Result);
                 client.Timeout = -1;
                 var request = new RestSharp.RestRequest(Method.POST);
                 request.AddHeader("Content-Type", "application/json");
@@ -43,6 +44,32 @@ namespace C9_NCG_DiscordBot.blockchain
             return null;
         }
 
+        public string NCGGoldLocal(string publickey , string address)
+        {
+            try
+            {
+                var client = new RestClient(address);
+                client.Timeout = -1;
+                var request = new RestSharp.RestRequest(Method.POST);
+                request.AddHeader("Content-Type", "application/json");
+                request.AddParameter("application/json", "{\"query\":\"{\\n  goldBalance(address:\\\"" + publickey + "\\\")\\n}\\n\"}", ParameterType.RequestBody);
+                IRestResponse response = client.Execute(request);
+                //Console.WriteLine("Response Received, parsing");
+                //We got response, now let's parse it.
+                JObject joResponse = JObject.Parse(response.Content);
+                JObject ojObject = (JObject)joResponse["data"];
+                JValue goldvalue = (JValue)ojObject["goldBalance"];
+                string ncg = goldvalue.Value<string>();
+                //Console.WriteLine(ncg);
+                return ncg;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+            }
+            return null;
+        }
+
         public async Task<string> NCGProfileNewAsync(string publickey)
         {
             ProfileModel profile = new ProfileModel();
@@ -51,7 +78,8 @@ namespace C9_NCG_DiscordBot.blockchain
                 try
                 {
                     Console.WriteLine("Calling API");
-                    var client = new RestClient("https://9c-main-full-state.planetarium.dev/graphql");
+                    var address = blockchain.NodesCheck.NodeSelector();
+                    var client = new RestClient(address.Result);
                     client.Timeout = -1;
                     var request = new RestRequest(Method.POST);
                     request.AddHeader("Content-Type", "application/json");
@@ -78,7 +106,8 @@ namespace C9_NCG_DiscordBot.blockchain
             try
             {
                 Console.WriteLine("Calling API");
-                var client = new RestClient("https://9c-main-full-state.planetarium.dev/graphql");
+                var address = blockchain.NodesCheck.NodeSelector();
+                var client = new RestClient(address.Result);
                 client.Timeout = -1;
                 var request = new RestSharp.RestRequest(Method.POST);
                 request.AddHeader("Content-Type", "application/json");
@@ -132,7 +161,8 @@ namespace C9_NCG_DiscordBot.blockchain
             try
             {
                 Console.WriteLine("Calling API");
-                var client = new RestClient("https://9c-main-full-state.planetarium.dev/graphql");
+                var address = blockchain.NodesCheck.NodeSelector();
+                var client = new RestClient(address.Result);
                 client.Timeout = -1;
                 var request = new RestSharp.RestRequest(Method.POST);
                 request.AddHeader("Content-Type", "application/json");
@@ -184,7 +214,8 @@ namespace C9_NCG_DiscordBot.blockchain
         public static async Task<int> TipImport(string address, string tomatch)
         {
             SqliteDataAccess db = new SqliteDataAccess();
-            var client = new RestClient("https://9c-main-full-state.planetarium.dev/graphql");
+            var address2 = blockchain.NodesCheck.NodeSelector();
+            var client = new RestClient(address2.Result);
             client.Timeout = 200000;
             var request = new RestRequest(Method.POST);
             request.AddHeader("Content-Type", "application/json");
