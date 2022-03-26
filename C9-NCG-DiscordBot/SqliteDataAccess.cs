@@ -14,8 +14,6 @@ namespace C9_NCG_DiscordBot
 
     public class SqliteDataAccess
     {
-        static String connectingstring = "Server=ncgm2.c9nkjivvja9b.us-east-2.rds.amazonaws.com;Port=3306;UID=ncgm;PWD=ncgm;Database=ncgm";
-        static String connectingstring2 = "Server=ncgm2.c9nkjivvja9b.us-east-2.rds.amazonaws.com;Port=3306;UID=ncgm;PWD=ncgm;Database=rpc";
 
         # region NCG
         public async Task<ProfileModel> LoadProfile(ulong discordid, string alias)
