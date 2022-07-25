@@ -2,4 +2,4 @@
 
 As the bot now became the official discord bot for nine-chronicles, the development of this project is now privated.
 
-Due to moderation features.
+Due to moderation and security features.
